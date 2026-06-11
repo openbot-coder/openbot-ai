@@ -1,14 +1,14 @@
 # OpenAI-Compatible API
 
-nanobot can expose a minimal OpenAI-compatible endpoint for local integrations:
+openbot can expose a minimal OpenAI-compatible endpoint for local integrations:
 
 ```bash
-python -m pip install "nanobot-ai[api]"
-nanobot agent -m "Hello!"
-nanobot serve
+python -m pip install "openbot-ai[api]"
+openbot agent -m "Hello!"
+openbot serve
 ```
 
-Run the CLI check first. If `nanobot agent -m "Hello!"` fails, fix provider or config setup before debugging the API server. By default, the API binds to `127.0.0.1:8900`. You can change this in `config.json`.
+Run the CLI check first. If `openbot agent -m "Hello!"` fails, fix provider or config setup before debugging the API server. By default, the API binds to `127.0.0.1:8900`. You can change this in `config.json`.
 
 For setup help, see [`quick-start.md`](./quick-start.md), [`providers.md`](./providers.md), and [`troubleshooting.md`](./troubleshooting.md).
 
@@ -31,7 +31,7 @@ Example tool call for cross-channel delivery from an API session:
 }
 ```
 
-If `channel` points to a channel that is not enabled in your config, nanobot will queue the outbound event but no platform delivery will occur.
+If `channel` points to a channel that is not enabled in your config, openbot will queue the outbound event but no platform delivery will occur.
 
 ## Endpoints
 

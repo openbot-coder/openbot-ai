@@ -36,17 +36,17 @@ print_row() {
   printf "  %-16s %6s lines\n" "$label" "$count"
 }
 
-echo "nanobot line count"
+echo "openbot line count"
 echo "=================="
 echo ""
 
 echo "Core runtime"
 echo "------------"
-core_agent=$(count_top_level_py_lines "nanobot/agent")
-core_bus=$(count_top_level_py_lines "nanobot/bus")
-core_config=$(count_top_level_py_lines "nanobot/config")
-core_cron=$(count_top_level_py_lines "nanobot/cron")
-core_session=$(count_top_level_py_lines "nanobot/session")
+core_agent=$(count_top_level_py_lines "openbot/agent")
+core_bus=$(count_top_level_py_lines "openbot/bus")
+core_config=$(count_top_level_py_lines "openbot/config")
+core_cron=$(count_top_level_py_lines "openbot/cron")
+core_session=$(count_top_level_py_lines "openbot/session")
 
 print_row "agent/" "$core_agent"
 print_row "bus/" "$core_bus"
@@ -59,12 +59,12 @@ core_total=$((core_agent + core_bus + core_config + core_cron + core_session))
 echo ""
 echo "Separate buckets"
 echo "----------------"
-extra_tools=$(count_recursive_py_lines "nanobot/agent/tools")
-extra_skills=$(count_skill_lines "nanobot/skills")
-extra_api=$(count_recursive_py_lines "nanobot/api")
-extra_cli=$(count_recursive_py_lines "nanobot/cli")
-extra_channels=$(count_recursive_py_lines "nanobot/channels")
-extra_utils=$(count_recursive_py_lines "nanobot/utils")
+extra_tools=$(count_recursive_py_lines "openbot/agent/tools")
+extra_skills=$(count_skill_lines "openbot/skills")
+extra_api=$(count_recursive_py_lines "openbot/api")
+extra_cli=$(count_recursive_py_lines "openbot/cli")
+extra_channels=$(count_recursive_py_lines "openbot/channels")
+extra_utils=$(count_recursive_py_lines "openbot/utils")
 
 print_row "tools/" "$extra_tools"
 print_row "skills/" "$extra_skills"
@@ -84,7 +84,7 @@ print_row "extra total" "$extra_total"
 echo ""
 echo "Notes"
 echo "-----"
-echo "  - agent/ only counts top-level Python files under nanobot/agent"
-echo "  - tools/ is counted separately from nanobot/agent/tools"
+echo "  - agent/ only counts top-level Python files under openbot/agent"
+echo "  - tools/ is counted separately from openbot/agent/tools"
 echo "  - skills/ counts .md, .py, and .sh files"
-echo "  - not included here: command/, providers/, security/, templates/, nanobot.py, root files"
+echo "  - not included here: command/, providers/, security/, templates/, openbot.py, root files"

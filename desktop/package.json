@@ -1,5 +1,5 @@
 {
-  "name": "@nanobot/desktop",
+  "name": "@openbot/desktop",
   "version": "0.2.1",
   "private": true,
   "type": "module",
@@ -10,11 +10,11 @@
     "prepare-engine": "node scripts/prepare-engine.mjs",
     "print-engine-url": "node scripts/prepare-engine.mjs --print-runtime-url",
     "dev": "bun run dev:app",
-    "dev:app": "NANOBOT_DESKTOP_WEB_DEV_URL=http://127.0.0.1:5173 bun run build && electron .",
+    "dev:app": "openbot_DESKTOP_WEB_DEV_URL=http://127.0.0.1:5173 bun run build && electron .",
     "dev:webui": "cd ../webui && bun run dev",
     "start": "electron .",
-    "make:mac:arm64": "bun run build:webui && NANOBOT_DESKTOP_ARCH=arm64 bun run prepare-engine && bun run build && electron-builder --mac dmg --arm64",
-    "make:mac:x64": "bun run build:webui && NANOBOT_DESKTOP_ARCH=x64 bun run prepare-engine && bun run build && electron-builder --mac dmg --x64",
+    "make:mac:arm64": "bun run build:webui && openbot_DESKTOP_ARCH=arm64 bun run prepare-engine && bun run build && electron-builder --mac dmg --arm64",
+    "make:mac:x64": "bun run build:webui && openbot_DESKTOP_ARCH=x64 bun run prepare-engine && bun run build && electron-builder --mac dmg --x64",
     "dist:mac:arm64": "electron-builder --mac dmg --arm64",
     "dist:mac:x64": "electron-builder --mac dmg --x64"
   },
@@ -25,8 +25,8 @@
     "typescript": "^5.7.2"
   },
   "build": {
-    "appId": "wiki.nanobot.desktop",
-    "productName": "nanobot",
+    "appId": "wiki.openbot.desktop",
+    "productName": "openbot",
     "asar": true,
     "files": [
       "build/**/*",
@@ -34,12 +34,12 @@
     ],
     "extraResources": [
       {
-        "from": "../nanobot/web/dist",
-        "to": "nanobot-webui"
+        "from": "../openbot/web/dist",
+        "to": "openbot-webui"
       },
       {
-        "from": "resources/nanobot-engine",
-        "to": "nanobot-engine",
+        "from": "resources/openbot-engine",
+        "to": "openbot-engine",
         "filter": [
           "**/*"
         ]
@@ -48,7 +48,7 @@
     "mac": {
       "category": "public.app-category.developer-tools",
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "nanobot uses the microphone to transcribe voice input before you send messages."
+        "NSMicrophoneUsageDescription": "openbot uses the microphone to transcribe voice input before you send messages."
       },
       "target": [
         "dmg"

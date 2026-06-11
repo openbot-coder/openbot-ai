@@ -113,7 +113,7 @@ export function Sidebar(props: SidebarProps) {
           )}
         >
           <img
-            src="/brand/nanobot_icon.png"
+            src="/brand/openbot_icon.png"
             alt=""
             className="h-8 w-8 select-none object-contain"
             draggable={false}

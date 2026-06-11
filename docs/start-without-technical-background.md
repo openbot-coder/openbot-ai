@@ -2,7 +2,7 @@
 
 This page is for you if you have never used a terminal, edited a JSON file, or configured an AI model before.
 
-The goal is small: get one local nanobot reply. Do not connect Telegram, Discord, WebUI, Docker, local models, or deployment yet. Those are easier after the first reply works.
+The goal is small: get one local openbot reply. Do not connect Telegram, Discord, WebUI, Docker, local models, or deployment yet. Those are easier after the first reply works.
 
 ## What You Are Setting Up
 
@@ -15,7 +15,7 @@ You will see these words during setup:
 | API key | A password-like token from an AI provider. Do not share it publicly. |
 | Provider | The service that owns the API key or local model endpoint. |
 | Model | The AI model ID that the provider can run. |
-| Config file | The settings file nanobot reads when it starts. |
+| Config file | The settings file openbot reads when it starts. |
 | Wizard | An interactive terminal menu that edits the config file for you. |
 | Model preset | A named model choice in the config file. |
 | `apiBase` | The HTTP address of a provider endpoint. Leave it blank unless your provider, proxy, or local server tells you to set one. |
@@ -62,7 +62,7 @@ If `python3` works but `python` does not, replace `python` with `python3` in the
 
 ## 3. Get a Provider API Key
 
-nanobot does not create AI accounts or API keys for you. Use an AI provider account, company endpoint, subscription endpoint, or local model server that you already control. The steps below use OpenRouter only as a concrete example so the commands and wizard choices have real names; it is not a ranking, default choice, or endorsement.
+openbot does not create AI accounts or API keys for you. Use an AI provider account, company endpoint, subscription endpoint, or local model server that you already control. The steps below use OpenRouter only as a concrete example so the commands and wizard choices have real names; it is not a ranking, default choice, or endorsement.
 
 If you use another provider, keep the same shape but replace the provider name, API key, and model ID with values from that provider. [`provider-cookbook.md`](./provider-cookbook.md) has copyable snippets for several common patterns.
 
@@ -74,40 +74,40 @@ For the example path:
 
 An OpenRouter key usually starts with `sk-or-v1-`. Other providers use different key shapes. Keep the key nearby because the setup wizard will ask you to paste it.
 
-## 4. Install nanobot
+## 4. Install openbot
 
-The easiest path is the one-command installer. It installs or upgrades nanobot, then starts the setup wizard.
+The easiest path is the one-command installer. It installs or upgrades openbot, then starts the setup wizard.
 
 **macOS / Linux**
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/nanobot/main/scripts/install.sh)"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.sh)"
 ```
 
 **Windows PowerShell**
 
 ```powershell
-irm https://raw.githubusercontent.com/HKUDS/nanobot/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.ps1 | iex
 ```
 
 These commands install the stable PyPI package. To preview what the installer would do without changing your environment, pass `--dry-run`:
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/nanobot/main/scripts/install.sh)" -- --dry-run
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.sh)" -- --dry-run
 ```
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/HKUDS/nanobot/main/scripts/install.ps1))) --dry-run
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.ps1))) --dry-run
 ```
 
 Use the development installer only when a maintainer asks you to test the current `main` branch:
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/nanobot/main/scripts/install.sh)" -- --dev
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.sh)" -- --dev
 ```
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/HKUDS/nanobot/main/scripts/install.ps1))) --dev
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.ps1))) --dev
 ```
 
 If the command says `curl` or `irm` is not found, or it cannot download from GitHub, use the manual install command below.
@@ -115,38 +115,38 @@ If the command says `curl` or `irm` is not found, or it cannot download from Git
 If you prefer to install manually, run:
 
 ```bash
-python -m pip install nanobot-ai
+python -m pip install openbot-ai
 ```
 
-Then check that nanobot is installed:
+Then check that openbot is installed:
 
 ```bash
-nanobot --version
+openbot --version
 ```
 
-If the terminal cannot find `nanobot`, use the module form:
+If the terminal cannot find `openbot`, use the module form:
 
 ```bash
-python -m nanobot --version
+python -m openbot --version
 ```
 
-Use `python3 -m nanobot --version` or `py -m nanobot --version` if that is the Python command that worked in step 2.
+Use `python3 -m openbot --version` or `py -m openbot --version` if that is the Python command that worked in step 2.
 
 ## 5. Run the Setup Wizard
 
 The one-command installer starts this for you after installation. If you installed manually, run:
 
 ```bash
-nanobot onboard --wizard
+openbot onboard --wizard
 ```
 
-If `nanobot` is not found, run:
+If `openbot` is not found, run:
 
 ```bash
-python -m nanobot onboard --wizard
+python -m openbot onboard --wizard
 ```
 
-Use `python3 -m nanobot onboard --wizard` or `py -m nanobot onboard --wizard` if that is the Python command that worked in step 2.
+Use `python3 -m openbot onboard --wizard` or `py -m openbot onboard --wizard` if that is the Python command that worked in step 2.
 
 The wizard is a terminal menu. It is not a graphical app, but it lets you choose options instead of hand-editing every JSON field.
 
@@ -207,7 +207,7 @@ If you are using another provider, use the same wizard choices but substitute th
 | Provider menu | The provider that owns your API key or endpoint. |
 | API key | The key from that provider, or leave it blank only if the provider does not use one. |
 | `apiBase` | Leave blank unless the provider docs, proxy docs, or local server docs give you a URL. |
-| Preset `provider` | The nanobot provider name, such as the one shown in [`provider-cookbook.md`](./provider-cookbook.md). |
+| Preset `provider` | The openbot provider name, such as the one shown in [`provider-cookbook.md`](./provider-cookbook.md). |
 | Preset `model` | A model ID that provider can actually serve. |
 | Preset name | `primary` is fine for the first setup. |
 
@@ -217,8 +217,8 @@ The wizard creates or updates:
 
 | Path | Meaning |
 |---|---|
-| `~/.nanobot/config.json` | Settings file. |
-| `~/.nanobot/workspace/` | Working folder for memory, sessions, and generated files. |
+| `~/.openbot/config.json` | Settings file. |
+| `~/.openbot/workspace/` | Working folder for memory, sessions, and generated files. |
 
 ## How to Merge JSON Snippets
 
@@ -252,7 +252,7 @@ Merge them into one object:
 }
 ```
 
-Notice the comma after the `providers` block. JSON needs commas between sibling sections, but not after the last section. If this feels hard, use `nanobot onboard --wizard` whenever possible.
+Notice the comma after the `providers` block. JSON needs commas between sibling sections, but not after the last section. If this feels hard, use `openbot onboard --wizard` whenever possible.
 
 ## 6. Manual Config Fallback
 
@@ -263,19 +263,19 @@ Use one of these commands:
 **Windows PowerShell**
 
 ```powershell
-notepad "$env:USERPROFILE\.nanobot\config.json"
+notepad "$env:USERPROFILE\.openbot\config.json"
 ```
 
 **macOS**
 
 ```bash
-open -e ~/.nanobot/config.json
+open -e ~/.openbot/config.json
 ```
 
 **Linux**
 
 ```bash
-xdg-open ~/.nanobot/config.json
+xdg-open ~/.openbot/config.json
 ```
 
 If this is a brand-new install and you have not configured anything else yet, replace the file with this minimal config:
@@ -313,23 +313,23 @@ Save the file.
 
 ## 7. Send the First Message
 
-First check that nanobot can read the saved setup:
+First check that openbot can read the saved setup:
 
 ```bash
-nanobot status
+openbot status
 ```
 
-This should show the config file path, workspace path, and the active model or preset. If `nanobot` is not found, use `python -m nanobot status`, `python3 -m nanobot status`, or `py -m nanobot status`, matching the Python command that worked in step 2.
+This should show the config file path, workspace path, and the active model or preset. If `openbot` is not found, use `python -m openbot status`, `python3 -m openbot status`, or `py -m openbot status`, matching the Python command that worked in step 2.
 
 It is normal for most providers to say `not set`. Only the provider you selected for the active preset needs to look configured.
 
 Run:
 
 ```bash
-nanobot agent -m "Hello!"
+openbot agent -m "Hello!"
 ```
 
-If that works, nanobot is installed and can call the model.
+If that works, openbot is installed and can call the model.
 
 You should see a normal assistant reply in the terminal. The exact words will differ, but it should look like this shape:
 
@@ -337,15 +337,15 @@ You should see a normal assistant reply in the terminal. The exact words will di
 Hello! How can I help you today?
 ```
 
-If `nanobot` is not found, run:
+If `openbot` is not found, run:
 
 ```bash
-python -m nanobot agent -m "Hello!"
+python -m openbot agent -m "Hello!"
 ```
 
-Use `python3 -m nanobot agent -m "Hello!"` or `py -m nanobot agent -m "Hello!"` if that is the Python command that worked in step 2.
+Use `python3 -m openbot agent -m "Hello!"` or `py -m openbot agent -m "Hello!"` if that is the Python command that worked in step 2.
 
-Once this works, nanobot can help with its own next setup step. Run `nanobot agent`, ask it to read these docs and update your current config for one specific goal, then run `/restart` when nanobot tells you the config is ready. For example, ask it to enable the browser UI, add one provider preset, or configure one chat app.
+Once this works, openbot can help with its own next setup step. Run `openbot agent`, ask it to read these docs and update your current config for one specific goal, then run `/restart` when openbot tells you the config is ready. For example, ask it to enable the browser UI, add one provider preset, or configure one chat app.
 
 ## 8. If Something Fails
 
@@ -356,7 +356,7 @@ Do not change many things at once. Check the exact error:
 | `JSON parse error` | The config file has a missing comma, extra comma, or mismatched brace. Copy the example again. |
 | `401`, `unauthorized`, or `invalid API key` | The API key is wrong, expired, has extra spaces, or was pasted under the wrong provider. |
 | `model not found` | The model ID is not available through the selected provider or your account cannot use it. |
-| `nanobot: command not found` | The install worked in Python, but your shell cannot find the script. Use `python -m nanobot ...`, `python3 -m nanobot ...`, or `py -m nanobot ...`, matching the Python command that worked earlier. |
+| `openbot: command not found` | The install worked in Python, but your shell cannot find the script. Use `python -m openbot ...`, `python3 -m openbot ...`, or `py -m openbot ...`, matching the Python command that worked earlier. |
 | No response after editing config | Restart the command. Long-running processes read config when they start. |
 
 For a fuller diagnosis path, see [`troubleshooting.md`](./troubleshooting.md).
@@ -366,17 +366,17 @@ For a fuller diagnosis path, see [`troubleshooting.md`](./troubleshooting.md).
 Skip these until the first local message works:
 
 - `apiBase`: hosted built-in providers often already have default endpoints. You only need `apiBase` for local models, proxies, custom OpenAI-compatible providers, or special regional/subscription endpoints.
-- WebUI and chat apps: first prove `nanobot agent -m "Hello!"`.
+- WebUI and chat apps: first prove `openbot agent -m "Hello!"`.
 - fallback models: useful later, but not needed for the first reply.
 - Langfuse: useful for observability, but not needed for first setup.
 
 ## Next Steps
 
-After the first reply works, choose only one next goal. Keep the terminal that runs `nanobot gateway` open whenever you use the WebUI or a chat app.
+After the first reply works, choose only one next goal. Keep the terminal that runs `openbot gateway` open whenever you use the WebUI or a chat app.
 
 ### Open the Browser UI
 
-1. Add this snippet to `~/.nanobot/config.json`. Merge it into the existing file instead of replacing the whole file:
+1. Add this snippet to `~/.openbot/config.json`. Merge it into the existing file instead of replacing the whole file:
 
 ```json
 { "channels": { "websocket": { "enabled": true } } }
@@ -385,7 +385,7 @@ After the first reply works, choose only one next goal. Keep the terminal that r
 2. Run:
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 3. Leave that terminal open.
@@ -393,7 +393,7 @@ nanobot gateway
 
 To stop the WebUI later, return to the gateway terminal and press `Ctrl+C`.
 
-If `nanobot` is not found, run `python -m nanobot gateway`, `python3 -m nanobot gateway`, or `py -m nanobot gateway`, matching the Python command that worked earlier. More details are in [`../webui/README.md`](../webui/README.md).
+If `openbot` is not found, run `python -m openbot gateway`, `python3 -m openbot gateway`, or `py -m openbot gateway`, matching the Python command that worked earlier. More details are in [`../webui/README.md`](../webui/README.md).
 
 ### Connect a Chat App
 
@@ -402,8 +402,8 @@ If `nanobot` is not found, run `python -m nanobot gateway`, `python3 -m nanobot 
 3. Run:
 
 ```bash
-nanobot channels status
-nanobot gateway
+openbot channels status
+openbot gateway
 ```
 
 4. Leave the gateway terminal open, then send a message from the allowed account.
@@ -420,12 +420,12 @@ When you ask for help, include:
 
 - your operating system;
 - the command you ran;
-- `nanobot --version`;
-- `nanobot status`;
-- whether `nanobot agent -m "Hello!"` works;
+- `openbot --version`;
+- `openbot status`;
+- whether `openbot agent -m "Hello!"` works;
 - the exact error text;
 - a config snippet with API keys and tokens removed.
 
 Never paste real API keys, bot tokens, OAuth tokens, or private chat IDs into a public issue or chat.
 
-If you find a docs mistake, outdated command, or confusing step, please open an issue: <https://github.com/HKUDS/nanobot/issues>.
+If you find a docs mistake, outdated command, or confusing step, please open an issue: <https://github.com/HKUDS/openbot/issues>.

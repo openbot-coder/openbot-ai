@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.runner import AgentRunResult
-from nanobot.agent.subagent import SubagentManager, SubagentStatus
-from nanobot.bus.queue import MessageBus
+from openbot.agent.runner import AgentRunResult
+from openbot.agent.subagent import SubagentManager, SubagentStatus
+from openbot.bus.queue import MessageBus
 
 
 @pytest.mark.asyncio

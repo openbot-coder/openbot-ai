@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-from nanobot.agent.memory import MemoryStore
+from openbot.agent.memory import MemoryStore
 
 
 class TestDreamSessionKey:
@@ -14,7 +14,7 @@ class TestDreamSessionKey:
 
     def test_unique_across_calls(self):
         now = datetime(2026, 5, 28, 10, 0, 0)
-        with patch("nanobot.agent.memory.datetime") as mock_dt:
+        with patch("openbot.agent.memory.datetime") as mock_dt:
             mock_dt.now.side_effect = [now, now + timedelta(seconds=1)]
             k1 = MemoryStore.dream_session_key()
             k2 = MemoryStore.dream_session_key()

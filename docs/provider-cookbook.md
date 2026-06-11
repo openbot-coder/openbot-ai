@@ -4,7 +4,7 @@ This page is for cases where you already know what you want to connect and need 
 
 If this is your first install and terminal commands are new to you, start with [`start-without-technical-background.md`](./start-without-technical-background.md). If you want the field-by-field explanation, read [`providers.md`](./providers.md) and then [`configuration.md#providers`](./configuration.md#providers).
 
-Most examples below are snippets to merge into `~/.nanobot/config.json`. Keep any existing sections you still need, and replace placeholder keys such as `${OPENROUTER_API_KEY}` with environment-variable references or real values only on your own machine.
+Most examples below are snippets to merge into `~/.openbot/config.json`. Keep any existing sections you still need, and replace placeholder keys such as `${OPENROUTER_API_KEY}` with environment-variable references or real values only on your own machine.
 
 Recipes are examples, not rankings. Pick the recipe that matches the credential, endpoint, and model ID you already intend to use.
 
@@ -17,19 +17,19 @@ Match the recipe to the credential or endpoint you already have:
 | A gateway key and model IDs that include a model family path, such as `provider/model-name` | [OpenRouter Gateway](#recipe-openrouter-gateway) | API key, provider config key, preset provider, and gateway model ID |
 | An OpenAI platform API key and OpenAI model ID | [OpenAI Direct](#recipe-openai-direct) | `OPENAI_API_KEY`, `provider: "openai"`, and an OpenAI model available to that account |
 | An Anthropic API key and Anthropic model ID | [Anthropic Direct](#recipe-anthropic-direct) | `ANTHROPIC_API_KEY`, `provider: "anthropic"`, and a non-gateway model ID |
-| An OpenAI-compatible `/v1` endpoint that is not a named nanobot provider | [Custom OpenAI-Compatible Provider](#recipe-custom-openai-compatible-provider) | `apiBase`, optional API key, and the model ID served by that endpoint |
+| An OpenAI-compatible `/v1` endpoint that is not a named openbot provider | [Custom OpenAI-Compatible Provider](#recipe-custom-openai-compatible-provider) | `apiBase`, optional API key, and the model ID served by that endpoint |
 | Ollama already running locally | [Ollama Local Model](#recipe-ollama-local-model) | Ollama `apiBase`, pulled model name, and local server availability |
 | vLLM, LM Studio, or another local OpenAI-compatible server | [vLLM or LM Studio](#recipe-vllm-or-lm-studio) | Local `/v1` base URL, any required key, and served model name |
 | A primary model plus one or more backups | [Fallback Presets](#recipe-fallback-presets) | Named presets in `modelPresets`, referenced from `agents.defaults.fallbackModels` |
-| A working agent and a Langfuse project | [Langfuse Tracing](#recipe-langfuse-tracing) | Langfuse env vars in the same process environment that starts nanobot |
+| A working agent and a Langfuse project | [Langfuse Tracing](#recipe-langfuse-tracing) | Langfuse env vars in the same process environment that starts openbot |
 
 ## How to Use a Recipe
 
-1. Install nanobot and run `nanobot onboard` or `nanobot onboard --wizard` once so `~/.nanobot/config.json` exists.
+1. Install openbot and run `openbot onboard` or `openbot onboard --wizard` once so `~/.openbot/config.json` exists.
 2. Put secrets in environment variables when possible.
-3. Merge the recipe snippet into `~/.nanobot/config.json`.
-4. Run `nanobot status`.
-5. Run `nanobot agent -m "Hello!"`.
+3. Merge the recipe snippet into `~/.openbot/config.json`.
+4. Run `openbot status`.
+5. Run `openbot agent -m "Hello!"`.
 6. If the CLI works, then connect WebUI, gateway, or chat apps.
 
 The active model should normally come from `agents.defaults.modelPreset`, and that name should point to an entry in `modelPresets`. Direct `agents.defaults.provider` and `agents.defaults.model` still work for older configs, but presets are easier to switch and easier to reuse as fallbacks.
@@ -44,17 +44,17 @@ Use the variable name shown by the recipe you picked. The commands below use `OP
 
 ```bash
 export OPENROUTER_API_KEY="sk-or-v1-..."
-nanobot agent -m "Hello!"
+openbot agent -m "Hello!"
 ```
 
 **Windows PowerShell**
 
 ```powershell
 $env:OPENROUTER_API_KEY = "sk-or-v1-..."
-nanobot agent -m "Hello!"
+openbot agent -m "Hello!"
 ```
 
-Environment variables set this way apply only to the current terminal. For long-running services such as systemd, Docker, LaunchAgent, or a remote shell, set the variables in that service environment before starting nanobot.
+Environment variables set this way apply only to the current terminal. For long-running services such as systemd, Docker, LaunchAgent, or a remote shell, set the variables in that service environment before starting openbot.
 
 ## Recipe: OpenRouter Gateway
 
@@ -88,11 +88,11 @@ This recipe applies when one API key routes many hosted model families.
 Verify:
 
 ```bash
-nanobot status
-nanobot agent -m "Hello!"
+openbot status
+openbot agent -m "Hello!"
 ```
 
-If this fails with `401` or `unauthorized`, check that `OPENROUTER_API_KEY` is visible in the same terminal or service that starts nanobot. If it fails with `model not found`, choose a model ID that OpenRouter lists for your account.
+If this fails with `401` or `unauthorized`, check that `OPENROUTER_API_KEY` is visible in the same terminal or service that starts openbot. If it fails with `model not found`, choose a model ID that OpenRouter lists for your account.
 
 ## Recipe: OpenAI Direct
 
@@ -126,10 +126,10 @@ This recipe applies when you have an OpenAI API key and want to call OpenAI dire
 Verify:
 
 ```bash
-OPENAI_API_KEY="sk-..." nanobot agent -m "Hello!"
+OPENAI_API_KEY="sk-..." openbot agent -m "Hello!"
 ```
 
-If your shell cannot use inline environment variables, set `OPENAI_API_KEY` first and then run `nanobot agent -m "Hello!"`. If the provider rejects `apiType`, remove `apiType` unless you are using a documented OpenAI-specific mode.
+If your shell cannot use inline environment variables, set `OPENAI_API_KEY` first and then run `openbot agent -m "Hello!"`. If the provider rejects `apiType`, remove `apiType` unless you are using a documented OpenAI-specific mode.
 
 ## Recipe: Anthropic Direct
 
@@ -163,14 +163,14 @@ This recipe applies when your key comes from Anthropic and your model name is an
 Verify:
 
 ```bash
-ANTHROPIC_API_KEY="sk-ant-..." nanobot agent -m "Hello!"
+ANTHROPIC_API_KEY="sk-ant-..." openbot agent -m "Hello!"
 ```
 
 If you copied a model name such as `anthropic/claude-sonnet-4.5`, that is a gateway-style model path and belongs under `provider: "openrouter"`, not `provider: "anthropic"`.
 
 ## Recipe: Custom OpenAI-Compatible Provider
 
-This recipe applies to an OpenAI-compatible service that is not a named nanobot provider.
+This recipe applies to an OpenAI-compatible service that is not a named openbot provider.
 
 ```json
 {
@@ -198,11 +198,11 @@ This recipe applies to an OpenAI-compatible service that is not a named nanobot 
 }
 ```
 
-Verify the endpoint before blaming nanobot:
+Verify the endpoint before blaming openbot:
 
 ```bash
 curl -sS https://api.example.com/v1/models
-nanobot agent -m "Hello!"
+openbot agent -m "Hello!"
 ```
 
 `apiBase` is the HTTP base URL, not the model name. Include the version path when the service expects it, such as `/v1`. If the service requires a non-empty key but does not validate it, use a placeholder such as `"apiKey": "EMPTY"`.
@@ -245,7 +245,7 @@ Verify:
 
 ```bash
 curl -sS http://localhost:11434/v1/models
-nanobot agent -m "Hello!"
+openbot agent -m "Hello!"
 ```
 
 If you see `connection refused`, Ollama is not running or `apiBase` points to the wrong port. If the response is very slow, try a smaller local model or lower `contextWindowTokens`.
@@ -349,27 +349,27 @@ This recipe applies when one provider sometimes rate-limits, one model is expens
 }
 ```
 
-`fallbackModels` belongs under `agents.defaults`. String entries are preset names, not raw model names. nanobot tries the active preset first, then the fallback presets in order.
+`fallbackModels` belongs under `agents.defaults`. String entries are preset names, not raw model names. openbot tries the active preset first, then the fallback presets in order.
 
-Keep fallback candidates realistic. If the local fallback has a smaller context window, nanobot must build context that fits the smallest window in the active chain.
+Keep fallback candidates realistic. If the local fallback has a smaller context window, openbot must build context that fits the smallest window in the active chain.
 
 ## Recipe: Langfuse Tracing
 
 This recipe applies after the agent works and you want observability for OpenAI-compatible provider calls.
 
-Install the optional package in the same Python environment that runs nanobot:
+Install the optional package in the same Python environment that runs openbot:
 
 ```bash
 python -m pip install langfuse
 ```
 
-Set the environment variables before starting nanobot:
+Set the environment variables before starting openbot:
 
 ```bash
 export LANGFUSE_SECRET_KEY="sk-lf-..."
 export LANGFUSE_PUBLIC_KEY="pk-lf-..."
 export LANGFUSE_BASE_URL="https://cloud.langfuse.com"
-nanobot agent -m "Hello!"
+openbot agent -m "Hello!"
 ```
 
 PowerShell:
@@ -378,7 +378,7 @@ PowerShell:
 $env:LANGFUSE_SECRET_KEY = "sk-lf-..."
 $env:LANGFUSE_PUBLIC_KEY = "pk-lf-..."
 $env:LANGFUSE_BASE_URL = "https://cloud.langfuse.com"
-nanobot agent -m "Hello!"
+openbot agent -m "Hello!"
 ```
 
 Langfuse is not a model provider in `config.json`. It is configured through environment variables and traces supported OpenAI-compatible provider calls. Native providers that do not use that client path may not produce Langfuse OpenAI-wrapper traces.
@@ -431,7 +431,7 @@ In chat:
 | `model not found` | The model ID does not belong to the selected provider or gateway | Compare `modelPresets.<name>.provider` and `modelPresets.<name>.model` |
 | `connection refused` | Local server is not running or `apiBase` has the wrong port/path | Run `curl <apiBase>/models` |
 | `provider not found` | Provider name is misspelled or uses the config key instead of registry name | Use names such as `openrouter`, `openai`, `anthropic`, `ollama`, `vllm`, `lm_studio` |
-| Langfuse shows no traces | Env vars are missing, `langfuse` is not installed in the active Python environment, or the provider path is native | Run `python -m pip show langfuse` and restart nanobot from the same environment |
+| Langfuse shows no traces | Env vars are missing, `langfuse` is not installed in the active Python environment, or the provider path is native | Run `python -m pip show langfuse` and restart openbot from the same environment |
 
 ## Next References
 

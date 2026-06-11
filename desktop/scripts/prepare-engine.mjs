@@ -22,9 +22,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..");
 const desktopRoot = path.resolve(__dirname, "..");
 const engineDest = path.resolve(
-  process.env.NANOBOT_ENGINE_DEST ?? path.join(desktopRoot, "resources", "nanobot-engine"),
+  process.env.openbot_ENGINE_DEST ?? path.join(desktopRoot, "resources", "openbot-engine"),
 );
-const pythonVersion = process.env.NANOBOT_DESKTOP_PYTHON_VERSION ?? "3.12";
+const pythonVersion = process.env.openbot_DESKTOP_PYTHON_VERSION ?? "3.12";
 const githubBase = "https://github.com/astral-sh/python-build-standalone";
 
 function run(command, args, options = {}) {
@@ -40,7 +40,7 @@ function run(command, args, options = {}) {
 async function download(url, destination) {
   const response = await fetch(url, {
     headers: {
-      "User-Agent": "nanobot/desktop-build",
+      "User-Agent": "openbot/desktop-build",
     },
   });
   if (!response.ok) {
@@ -52,7 +52,7 @@ async function download(url, destination) {
 async function fetchText(url) {
   const response = await fetch(url, {
     headers: {
-      "User-Agent": "nanobot/desktop-build",
+      "User-Agent": "openbot/desktop-build",
       "Accept": "text/html",
     },
   });
@@ -63,7 +63,7 @@ async function fetchText(url) {
 }
 
 function targetTriple() {
-  const requested = process.env.NANOBOT_DESKTOP_ARCH ?? process.arch;
+  const requested = process.env.openbot_DESKTOP_ARCH ?? process.arch;
   if (requested === "arm64" || requested === "aarch64") return "aarch64-apple-darwin";
   if (requested === "x64" || requested === "x86_64") return "x86_64-apple-darwin";
   throw new Error(`unsupported desktop engine arch: ${requested}`);
@@ -188,18 +188,18 @@ async function resolveArchive() {
 
   const url = process.env.PYTHON_STANDALONE_URL ?? await defaultStandaloneUrl();
   const suffix = url.endsWith(".tar.gz") ? ".tar.gz" : path.extname(url);
-  const downloadPath = path.join(tmpdir(), `nanobot-python-${Date.now()}${suffix}`);
+  const downloadPath = path.join(tmpdir(), `openbot-python-${Date.now()}${suffix}`);
   console.log(`Downloading Python runtime from ${url}`);
   await download(url, downloadPath);
   return { archive: downloadPath, cleanupArchive: true };
 }
 
-async function installNanobot(pythonPath) {
+async function installopenbot(pythonPath) {
   run(pythonPath, ["-m", "ensurepip", "--upgrade"]);
   run(pythonPath, ["-m", "pip", "install", "--upgrade", "pip"]);
 
   const installArgs = ["-m", "pip", "install", "--upgrade"];
-  const wheelhouse = process.env.NANOBOT_WHEELHOUSE;
+  const wheelhouse = process.env.openbot_WHEELHOUSE;
   if (wheelhouse) {
     installArgs.push("--no-index", "--find-links", path.resolve(wheelhouse));
   }
@@ -212,11 +212,11 @@ async function writeManifest(pythonPath) {
   const pyproject = await readFile(path.join(repoRoot, "pyproject.toml"), "utf8");
   const match = pyproject.match(/^version\s*=\s*"([^"]+)"/m);
   await writeFile(
-    path.join(engineDest, "nanobot-engine.json"),
+    path.join(engineDest, "openbot-engine.json"),
     JSON.stringify(
       {
         python: version.stdout.trim() || version.stderr.trim(),
-        nanobot_version: match?.[1] ?? "unknown",
+        openbot_version: match?.[1] ?? "unknown",
         prepared_at: new Date().toISOString(),
         source: "python-build-standalone",
       },
@@ -234,7 +234,7 @@ async function main() {
   }
 
   const { archive, cleanupArchive } = await resolveArchive();
-  const extractDir = path.join(tmpdir(), `nanobot-engine-${Date.now()}`);
+  const extractDir = path.join(tmpdir(), `openbot-engine-${Date.now()}`);
   try {
     await rm(extractDir, { recursive: true, force: true });
     await extractArchive(archive, extractDir);
@@ -247,10 +247,10 @@ async function main() {
     await assertNoExternalSymlinks(engineDest);
 
     const pythonPath = path.join(engineDest, "bin", "python3");
-    await installNanobot(pythonPath);
+    await installopenbot(pythonPath);
     await writeManifest(pythonPath);
     await writeFile(path.join(engineDest, ".gitkeep"), "", "utf8");
-    console.log(`Prepared nanobot desktop engine at ${engineDest}`);
+    console.log(`Prepared openbot desktop engine at ${engineDest}`);
   } finally {
     await rm(extractDir, { recursive: true, force: true });
     if (cleanupArchive) {

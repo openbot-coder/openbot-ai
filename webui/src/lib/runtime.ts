@@ -23,7 +23,7 @@ export interface HostRuntimeInfo {
   engine_transport?: "unix_socket";
 }
 
-export interface NanobotHostApi {
+export interface openbotHostApi {
   getRuntimeInfo(): Promise<HostRuntimeInfo>;
   restartEngine(): Promise<void>;
   pickFolder(): Promise<string | null>;
@@ -47,7 +47,7 @@ export type HostSocketEvent =
   | { code?: number; id: string; reason?: string; type: "close" };
 
 type HostSocketBridge = Required<Pick<
-  NanobotHostApi,
+  openbotHostApi,
   "closeSocket" | "onSocketEvent" | "openSocket" | "sendSocket"
 >>;
 
@@ -58,13 +58,13 @@ const HOST_WS_CLOSED = 3;
 
 declare global {
   interface Window {
-    nanobotHost?: NanobotHostApi;
+    openbotHost?: openbotHostApi;
   }
 }
 
-export function getHostApi(): NanobotHostApi | null {
+export function getHostApi(): openbotHostApi | null {
   if (typeof window === "undefined") return null;
-  return window.nanobotHost ?? null;
+  return window.openbotHost ?? null;
 }
 
 export function toRuntimeSurface(surface: string | null | undefined): RuntimeSurface {

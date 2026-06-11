@@ -13,13 +13,13 @@ from mcp import types as mcp_types
 from mcp.shared.exceptions import McpError
 from mcp.types import ErrorData
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools import mcp as mcp_runtime
-from nanobot.agent.tools.base import Tool
-from nanobot.agent.tools.mcp import MCPResourceWrapper, MCPToolWrapper
-from nanobot.bus.queue import MessageBus
-from nanobot.config.loader import load_config, save_config
-from nanobot.config.schema import MCPServerConfig
+from openbot.agent.loop import AgentLoop
+from openbot.agent.tools import mcp as mcp_runtime
+from openbot.agent.tools.base import Tool
+from openbot.agent.tools.mcp import MCPResourceWrapper, MCPToolWrapper
+from openbot.bus.queue import MessageBus
+from openbot.config.loader import load_config, save_config
+from openbot.config.schema import MCPServerConfig
 
 
 class _FakeMcpTool(Tool):
@@ -66,7 +66,7 @@ async def test_connect_mcp_retries_when_no_servers_connect(tmp_path, monkeypatch
         attempts += 1
         return {}
 
-    monkeypatch.setattr("nanobot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
+    monkeypatch.setattr("openbot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
 
     await loop._connect_mcp()
     await loop._connect_mcp()
@@ -82,7 +82,7 @@ async def test_reload_mcp_servers_adds_and_removes_tools_without_restart(
     monkeypatch: pytest.MonkeyPatch,
 ):
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", config_path)
+    monkeypatch.setattr("openbot.config.loader._current_config_path", config_path)
     config = load_config()
     config.tools.mcp_servers["browserbase"] = MCPServerConfig(
         type="stdio",
@@ -105,7 +105,7 @@ async def test_reload_mcp_servers_adds_and_removes_tools_without_restart(
             stacks[name] = stack
         return stacks
 
-    monkeypatch.setattr("nanobot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
+    monkeypatch.setattr("openbot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
     loop = _make_loop(tmp_path, mcp_servers={})
 
     added = await mcp_runtime.reload_servers(loop, loop.tools)
@@ -134,7 +134,7 @@ async def test_request_mcp_reload_reaches_runtime_control_without_restart(
     monkeypatch: pytest.MonkeyPatch,
 ):
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", config_path)
+    monkeypatch.setattr("openbot.config.loader._current_config_path", config_path)
     config = load_config()
     config.tools.mcp_servers["browserbase"] = MCPServerConfig(
         type="stdio",
@@ -157,7 +157,7 @@ async def test_request_mcp_reload_reaches_runtime_control_without_restart(
             stacks[name] = stack
         return stacks
 
-    monkeypatch.setattr("nanobot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
+    monkeypatch.setattr("openbot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
     loop = _make_loop(tmp_path, mcp_servers={})
 
     async def _handle_one_runtime_control() -> None:
@@ -195,7 +195,7 @@ async def test_reload_mcp_servers_retries_configured_server_without_live_stack(
     monkeypatch: pytest.MonkeyPatch,
 ):
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", config_path)
+    monkeypatch.setattr("openbot.config.loader._current_config_path", config_path)
     config = load_config()
     config.tools.mcp_servers["browserbase"] = MCPServerConfig(
         type="stdio",
@@ -212,7 +212,7 @@ async def test_reload_mcp_servers_retries_configured_server_without_live_stack(
             stacks[name] = stack
         return stacks
 
-    monkeypatch.setattr("nanobot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
+    monkeypatch.setattr("openbot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
     loop = _make_loop(tmp_path, mcp_servers={"browserbase": config.tools.mcp_servers["browserbase"]})
 
     result = await mcp_runtime.reload_servers(loop, loop.tools)
@@ -271,7 +271,7 @@ async def test_mcp_tool_reconnects_after_session_terminated(
             stacks[name] = stack
         return stacks
 
-    monkeypatch.setattr("nanobot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
+    monkeypatch.setattr("openbot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
 
     await loop._connect_mcp()
     old_tool = loop.tools.get("mcp_remote_quote")
@@ -324,7 +324,7 @@ async def test_mcp_reconnect_handler_uses_sanitized_server_prefix(
             stacks[name] = stack
         return stacks
 
-    monkeypatch.setattr("nanobot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
+    monkeypatch.setattr("openbot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
 
     await loop._connect_mcp()
     old_tool = loop.tools.get("mcp_remote_quote")
@@ -384,7 +384,7 @@ async def test_concurrent_mcp_reconnect_reuses_fresh_session(
             stacks[name] = stack
         return stacks
 
-    monkeypatch.setattr("nanobot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
+    monkeypatch.setattr("openbot.agent.tools.mcp.connect_mcp_servers", _fake_connect)
 
     await loop._connect_mcp()
     old_alpha = loop.tools.get("mcp_remote_resource_alpha")

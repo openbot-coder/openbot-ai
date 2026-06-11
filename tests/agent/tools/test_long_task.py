@@ -7,17 +7,17 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import RequestContext
-from nanobot.agent.tools.long_task import (
+from openbot.agent.loop import AgentLoop
+from openbot.agent.tools.context import RequestContext
+from openbot.agent.tools.long_task import (
     CompleteGoalTool,
     LongTaskTool,
 )
-from nanobot.bus.queue import MessageBus
-from nanobot.bus.runtime_events import RuntimeEventBus
-from nanobot.session.goal_state import GOAL_STATE_KEY
-from nanobot.session.manager import SessionManager
-from nanobot.session.webui_turns import WebuiTurnCoordinator
+from openbot.bus.queue import MessageBus
+from openbot.bus.runtime_events import RuntimeEventBus
+from openbot.session.goal_state import GOAL_STATE_KEY
+from openbot.session.manager import SessionManager
+from openbot.session.webui_turns import WebuiTurnCoordinator
 
 
 def _tools(sm: SessionManager) -> tuple[LongTaskTool, CompleteGoalTool]:

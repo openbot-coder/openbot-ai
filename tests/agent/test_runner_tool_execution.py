@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from nanobot.agent.runner import AgentRunner, AgentRunSpec
-from nanobot.agent.tools.base import Tool
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.config.schema import AgentDefaults
-from nanobot.providers.base import LLMResponse, ToolCallRequest
-from nanobot.providers.openai_compat_provider import OpenAICompatProvider
-from nanobot.providers.openai_responses.parsing import parse_response_output
+from openbot.agent.runner import AgentRunner, AgentRunSpec
+from openbot.agent.tools.base import Tool
+from openbot.agent.tools.registry import ToolRegistry
+from openbot.config.schema import AgentDefaults
+from openbot.providers.base import LLMResponse, ToolCallRequest
+from openbot.providers.openai_compat_provider import OpenAICompatProvider
+from openbot.providers.openai_responses.parsing import parse_response_output
 
 _MAX_TOOL_RESULT_CHARS = AgentDefaults().max_tool_result_chars
 
@@ -244,7 +244,7 @@ async def test_runner_rejects_near_miss_tool_name_without_executing():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("arguments", ['{path:"notes.txt"}', "null"])
 async def test_runner_rejects_openai_compat_invalid_arguments_without_executing(arguments):
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI"):
+    with patch("openbot.providers.openai_compat_provider.AsyncOpenAI"):
         parsed = OpenAICompatProvider()._parse({
             "choices": [{
                 "message": {

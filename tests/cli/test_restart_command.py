@@ -10,14 +10,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from nanobot.bus.events import InboundMessage
-from nanobot.providers.base import LLMResponse
+from openbot.bus.events import InboundMessage
+from openbot.providers.base import LLMResponse
 
 
 def _make_loop():
     """Create a minimal AgentLoop with mocked dependencies."""
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.queue import MessageBus
+    from openbot.agent.loop import AgentLoop
+    from openbot.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
@@ -25,9 +25,9 @@ def _make_loop():
     workspace = MagicMock()
     workspace.__truediv__ = MagicMock(return_value=MagicMock())
 
-    with patch("nanobot.agent.loop.ContextBuilder"), \
-         patch("nanobot.agent.loop.SessionManager"), \
-         patch("nanobot.agent.loop.SubagentManager"):
+    with patch("openbot.agent.loop.ContextBuilder"), \
+         patch("openbot.agent.loop.SessionManager"), \
+         patch("openbot.agent.loop.SubagentManager"):
         loop = AgentLoop(bus=bus, provider=provider, workspace=workspace)
     return loop, bus
 
@@ -36,9 +36,9 @@ class TestRestartCommand:
 
     @pytest.mark.asyncio
     async def test_restart_sends_message_and_calls_execv(self):
-        from nanobot.command.builtin import cmd_restart
-        from nanobot.command.router import CommandContext
-        from nanobot.utils.restart import (
+        from openbot.command.builtin import cmd_restart
+        from openbot.command.router import CommandContext
+        from openbot.utils.restart import (
             RESTART_NOTIFY_CHANNEL_ENV,
             RESTART_NOTIFY_CHAT_ID_ENV,
             RESTART_STARTED_AT_ENV,
@@ -64,8 +64,8 @@ class TestRestartCommand:
         )
 
         with patch.dict(os.environ, {}, clear=False), \
-             patch("nanobot.command.builtin.asyncio", new=fake_asyncio), \
-             patch("nanobot.command.builtin.os.execv") as mock_execv:
+             patch("openbot.command.builtin.asyncio", new=fake_asyncio), \
+             patch("openbot.command.builtin.os.execv") as mock_execv:
             out = await cmd_restart(ctx)
             assert "Restarting" in out.content
             assert os.environ.get(RESTART_NOTIFY_CHANNEL_ENV) == "cli"
@@ -98,8 +98,8 @@ class TestRestartCommand:
         )
 
         with patch.object(loop, "_dispatch", new_callable=AsyncMock) as mock_dispatch, \
-             patch("nanobot.command.builtin.asyncio", new=fake_asyncio), \
-             patch("nanobot.command.builtin.os.execv"):
+             patch("openbot.command.builtin.asyncio", new=fake_asyncio), \
+             patch("openbot.command.builtin.os.execv"):
             await bus.publish_inbound(msg)
 
             loop._running = True
@@ -137,7 +137,7 @@ class TestRestartCommand:
                 pass
 
             mock_dispatch.assert_not_called()
-            assert "nanobot" in out.content.lower() or "Model" in out.content
+            assert "openbot" in out.content.lower() or "Model" in out.content
 
     @pytest.mark.asyncio
     async def test_run_propagates_external_cancellation(self):
@@ -217,11 +217,11 @@ class TestRestartCommand:
     async def test_run_agent_loop_estimates_usage_when_provider_omits_it(self, monkeypatch):
         loop, _bus = _make_loop()
         monkeypatch.setattr(
-            "nanobot.agent.runner.estimate_prompt_tokens_chain",
+            "openbot.agent.runner.estimate_prompt_tokens_chain",
             lambda *_args, **_kwargs: (123, "test"),
         )
         monkeypatch.setattr(
-            "nanobot.agent.runner.estimate_message_tokens",
+            "openbot.agent.runner.estimate_message_tokens",
             lambda _message: 7,
         )
         loop.provider.chat_with_retry = AsyncMock(side_effect=[

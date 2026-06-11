@@ -34,7 +34,7 @@ The host loads `http://127.0.0.1:5173` in development, so React changes hot relo
 
    ```sh
    cd desktop
-   NANOBOT_DESKTOP_ARCH=arm64 bun run prepare-engine
+   openbot_DESKTOP_ARCH=arm64 bun run prepare-engine
    ```
 
 3. Build the app:
@@ -44,20 +44,20 @@ The host loads `http://127.0.0.1:5173` in development, so React changes hot relo
    bun run make:mac:x64
    ```
 
-   `electron-builder` packages `nanobot/web/dist` as `Resources/nanobot-webui`.
+   `electron-builder` packages `openbot/web/dist` as `Resources/openbot-webui`.
 
 ## Checklist
 
 - WebUI source remains host-neutral: it may branch on generic runtime capabilities, but it must not import Electron or desktop source files.
 
   ```sh
-  rg -n "from ['\\\"]electron|desktop/src|nanobotDesktop" webui/src
+  rg -n "from ['\\\"]electron|desktop/src|openbotDesktop" webui/src
   ```
 
   This command should print nothing.
 
 - Native host behavior is implemented in `desktop/src`.
 - Provider, model, credential, and login setup stay in shared WebUI settings. Do not duplicate those flows in Electron-owned HTML.
-- Shared UI behavior is implemented in `webui/src` through `window.nanobotHost` and generic runtime capability checks.
+- Shared UI behavior is implemented in `webui/src` through `window.openbotHost` and generic runtime capability checks.
 - Do not copy React components from `webui/src` into this folder.
 - Do not commit bundled runtimes, DMGs, or `node_modules`.

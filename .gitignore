@@ -12,7 +12,7 @@ desktop/build/
 desktop/dist/
 desktop/node_modules/
 desktop/package-lock.json
-desktop/resources/nanobot-engine/
+desktop/resources/openbot-engine/
 
 # Claude / AI assistant artifacts
 docs/superpowers/
@@ -86,6 +86,7 @@ Desktop.ini
 .cursor/
 .idea/
 .fleet/
+.codegraph/
 *.code-workspace
 *.sublime-project
 *.sublime-workspace
