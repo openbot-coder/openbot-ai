@@ -9,9 +9,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from nanobot.bus.events import InboundMessage, OutboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.channels.signal import (
+from openbot.bus.events import InboundMessage, OutboundMessage
+from openbot.bus.queue import MessageBus
+from openbot.channels.signal import (
     SignalChannel,
     SignalConfig,
     SignalDMConfig,
@@ -810,7 +810,7 @@ class TestHandleDataMessageDM:
         # subsequent message — otherwise the pairing reply loops forever.
         approved = {"+19995550002"}
         monkeypatch.setattr(
-            "nanobot.channels.signal.is_approved",
+            "openbot.channels.signal.is_approved",
             lambda channel, sender_id: sender_id in approved,
         )
         ch = _make_channel(dm_enabled=True, dm_policy="allowlist", dm_allow_from=[])

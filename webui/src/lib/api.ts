@@ -64,7 +64,7 @@ async function request<T>(
     throw new ApiError(
       res.status,
       isHtml
-        ? "Gateway returned WebUI HTML instead of JSON. Restart nanobot gateway and try again."
+        ? "Gateway returned WebUI HTML instead of JSON. Restart openbot gateway and try again."
         : "Gateway returned a non-JSON response.",
     );
   }
@@ -83,7 +83,7 @@ function mcpValuesHeader(values: Record<string, unknown>): HeadersInit | undefin
     payload[key] = value;
   });
   if (!Object.keys(payload).length) return undefined;
-  return { "X-Nanobot-MCP-Values": JSON.stringify(payload) };
+  return { "X-openbot-MCP-Values": JSON.stringify(payload) };
 }
 
 function splitKey(key: string): { channel: string; chatId: string } {

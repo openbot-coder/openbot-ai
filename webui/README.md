@@ -1,6 +1,6 @@
-# nanobot WebUI
+# openbot WebUI
 
-The WebUI is the browser workbench served by `nanobot gateway`. If you installed `nanobot-ai` from PyPI, the WebUI bundle is already included; this `webui/` source tree is only needed when you are changing the frontend.
+The WebUI is the browser workbench served by `openbot gateway`. If you installed `openbot-ai` from PyPI, the WebUI bundle is already included; this `webui/` source tree is only needed when you are changing the frontend.
 
 For the project overview, install guide, and general docs map, see the root [`README.md`](../README.md) and [`docs/README.md`](../docs/README.md).
 
@@ -15,21 +15,21 @@ For the project overview, install guide, and general docs map, see the root [`RE
 
 ## Just want to use the WebUI?
 
-If you installed nanobot via `python -m pip install nanobot-ai`, the WebUI is **already bundled** in the wheel. You do **not** need Node.js, Bun, Vite, or anything in this directory unless you are changing the WebUI source code.
+If you installed openbot via `python -m pip install openbot-ai`, the WebUI is **already bundled** in the wheel. You do **not** need Node.js, Bun, Vite, or anything in this directory unless you are changing the WebUI source code.
 
 First prove the provider path:
 
 ```bash
-nanobot agent -m "Hello!"
+openbot agent -m "Hello!"
 ```
 
-If the shell cannot find `nanobot`, use the module form from the same Python environment:
+If the shell cannot find `openbot`, use the module form from the same Python environment:
 
 ```bash
-python -m nanobot agent -m "Hello!"
+python -m openbot agent -m "Hello!"
 ```
 
-Then merge this WebSocket snippet into your existing `~/.nanobot/config.json` instead of replacing the whole file:
+Then merge this WebSocket snippet into your existing `~/.openbot/config.json` instead of replacing the whole file:
 
 ```json
 { "channels": { "websocket": { "enabled": true } } }
@@ -40,7 +40,7 @@ If you are new to JSON snippets, see [`docs/start-without-technical-background.m
 Start the gateway:
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 Leave this terminal running while you use the WebUI. Closing it stops the browser UI and WebSocket connection.
@@ -53,12 +53,12 @@ This `webui/` tree is for people **changing the WebUI source code**. It is built
 
 ```text
 webui/                 source tree (this directory)
-nanobot/web/dist/      build output served by the gateway
+openbot/web/dist/      build output served by the gateway
 ```
 
 ## Develop the WebUI (Vite HMR)
 
-### 1. Install nanobot from source
+### 1. Install openbot from source
 
 From the repository root:
 
@@ -70,7 +70,7 @@ python -m pip install -e .
 
 ### 2. Enable the WebSocket channel
 
-In `~/.nanobot/config.json`, merge:
+In `~/.openbot/config.json`, merge:
 
 ```json
 { "channels": { "websocket": { "enabled": true } } }
@@ -81,7 +81,7 @@ In `~/.nanobot/config.json`, merge:
 In one terminal:
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 ### 4. Start the WebUI dev server
@@ -101,12 +101,12 @@ By default the dev server proxies `/api`, `/webui`, `/auth`, and WebSocket traff
 If your gateway listens on a non-default port, point the dev server at it:
 
 ```bash
-NANOBOT_API_URL=http://127.0.0.1:9000 bun run dev
+openbot_API_URL=http://127.0.0.1:9000 bun run dev
 ```
 
 ### Access from another device (LAN)
 
-To use the WebUI from another device on the same network, set `host` to `"0.0.0.0"` and configure a `token` or `tokenIssueSecret` in `~/.nanobot/config.json`:
+To use the WebUI from another device on the same network, set `host` to `"0.0.0.0"` and configure a `token` or `tokenIssueSecret` in `~/.openbot/config.json`:
 
 ```json
 {
@@ -133,7 +133,7 @@ If you want to preview the production bundle locally without rebuilding the whee
 
 ```bash
 cd webui
-bun run build          # writes to ../nanobot/web/dist
+bun run build          # writes to ../openbot/web/dist
 ```
 
 The gateway picks up the new bundle on the next restart.

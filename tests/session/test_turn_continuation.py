@@ -7,9 +7,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from nanobot.bus.events import InboundMessage
-from nanobot.session.goal_state import GOAL_STATE_KEY
-from nanobot.session.turn_continuation import (
+from openbot.bus.events import InboundMessage
+from openbot.session.goal_state import GOAL_STATE_KEY
+from openbot.session.turn_continuation import (
     INTERNAL_CONTINUATION_KIND_META,
     INTERNAL_CONTINUATION_META,
     INTERNAL_CONTINUATION_PENDING_META,

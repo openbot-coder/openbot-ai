@@ -6,14 +6,14 @@
     <meta name="color-scheme" content="light dark" />
     <meta
       name="description"
-      content="nanobot web UI — chat with your nanobot workspace."
+      content="openbot web UI — chat with your openbot workspace."
       data-i18n-meta="description"
     />
     <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#161618" media="(prefers-color-scheme: dark)" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/brand/nanobot_favicon_32.png" />
-    <link rel="icon" type="image/png" sizes="73x75" href="/brand/nanobot_icon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/brand/nanobot_apple_touch.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/brand/openbot_favicon_32.png" />
+    <link rel="icon" type="image/png" sizes="73x75" href="/brand/openbot_icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/brand/openbot_apple_touch.png" />
     <style>
       html,
       body,
@@ -80,7 +80,7 @@
     <script>
       (function () {
         try {
-          var stored = localStorage.getItem("nanobot-webui.theme");
+          var stored = localStorage.getItem("openbot-webui.theme");
           var dark =
             stored === "dark" ||
             (!stored &&
@@ -92,43 +92,43 @@
     </script>
     <script>
       (function () {
-        var localeKey = "nanobot.locale";
+        var localeKey = "openbot.locale";
         var copy = {
           en: {
-            boot: "Loading nanobot…",
-            description: "nanobot web UI — chat with your nanobot workspace."
+            boot: "Loading openbot…",
+            description: "openbot web UI — chat with your openbot workspace."
           },
           "zh-CN": {
-            boot: "正在加载 nanobot…",
-            description: "nanobot Web UI —— 与你的 nanobot 工作区对话。"
+            boot: "正在加载 openbot…",
+            description: "openbot Web UI —— 与你的 openbot 工作区对话。"
           },
           "zh-TW": {
-            boot: "正在載入 nanobot…",
-            description: "nanobot Web UI —— 與你的 nanobot 工作區對話。"
+            boot: "正在載入 openbot…",
+            description: "openbot Web UI —— 與你的 openbot 工作區對話。"
           },
           fr: {
-            boot: "Chargement de nanobot…",
-            description: "Interface web nanobot — discutez avec votre espace de travail nanobot."
+            boot: "Chargement de openbot…",
+            description: "Interface web openbot — discutez avec votre espace de travail openbot."
           },
           ja: {
-            boot: "nanobot を読み込み中…",
-            description: "nanobot Web UI — nanobot ワークスペースと会話します。"
+            boot: "openbot を読み込み中…",
+            description: "openbot Web UI — openbot ワークスペースと会話します。"
           },
           ko: {
-            boot: "nanobot 불러오는 중…",
-            description: "nanobot 웹 UI — nanobot 작업공간과 대화하세요."
+            boot: "openbot 불러오는 중…",
+            description: "openbot 웹 UI — openbot 작업공간과 대화하세요."
           },
           es: {
-            boot: "Cargando nanobot…",
-            description: "Interfaz web de nanobot: conversa con tu espacio de trabajo de nanobot."
+            boot: "Cargando openbot…",
+            description: "Interfaz web de openbot: conversa con tu espacio de trabajo de openbot."
           },
           vi: {
-            boot: "Đang tải nanobot…",
-            description: "Giao diện web nanobot — trò chuyện với workspace nanobot của bạn."
+            boot: "Đang tải openbot…",
+            description: "Giao diện web openbot — trò chuyện với workspace openbot của bạn."
           },
           id: {
-            boot: "Memuat nanobot…",
-            description: "UI web nanobot — ngobrol dengan workspace nanobot Anda."
+            boot: "Memuat openbot…",
+            description: "UI web openbot — ngobrol dengan workspace openbot Anda."
           }
         };
 
@@ -170,14 +170,14 @@
         } catch {}
       })();
     </script>
-    <title>nanobot</title>
+    <title>openbot</title>
   </head>
   <body class="bg-background text-foreground antialiased">
     <div id="root">
       <div class="boot-splash">
         <div class="boot-splash-inner">
           <span class="boot-dot" aria-hidden="true"></span>
-          <span data-boot-copy>Loading nanobot…</span>
+          <span data-boot-copy>Loading openbot…</span>
         </div>
       </div>
     </div>

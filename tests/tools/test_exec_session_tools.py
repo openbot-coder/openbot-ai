@@ -6,12 +6,12 @@ import shlex
 import subprocess
 import sys
 
-from nanobot.agent.tools.exec_session import (
+from openbot.agent.tools.exec_session import (
     ExecSessionManager,
     ListExecSessionsTool,
     WriteStdinTool,
 )
-from nanobot.agent.tools.shell import ExecTool
+from openbot.agent.tools.shell import ExecTool
 
 
 def _python_command(code: str) -> str:

@@ -7,11 +7,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from nanobot.providers.azure_openai_provider import (
+from openbot.providers.azure_openai_provider import (
     AzureOpenAIProvider,
     _AzureTokenProvider,
 )
-from nanobot.providers.base import LLMResponse
+from openbot.providers.base import LLMResponse
 
 # ---------------------------------------------------------------------------
 # Init & validation
@@ -166,7 +166,7 @@ def test_init_missing_key_without_azure_identity_raises(monkeypatch):
         return real_import(name, *args, **kwargs)
 
     with patch("builtins.__import__", side_effect=fake_import):
-        with pytest.raises(RuntimeError, match=r"pip install 'nanobot-ai\[azure\]'"):
+        with pytest.raises(RuntimeError, match=r"pip install 'openbot-ai\[azure\]'"):
             AzureOpenAIProvider(api_key="", api_base="https://res.openai.azure.com")
 
 

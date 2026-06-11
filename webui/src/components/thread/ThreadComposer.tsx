@@ -65,7 +65,7 @@ import {
   type RestoredReadyImage,
 } from "@/hooks/useAttachedImages";
 import { useClipboardAndDrop } from "@/hooks/useClipboardAndDrop";
-import type { SendImage, SendOptions } from "@/hooks/useNanobotStream";
+import type { SendImage, SendOptions } from "@/hooks/useopenbotStream";
 import { useVoiceRecorder, type VoiceRecorderErrorKey } from "@/hooks/useVoiceRecorder";
 import type {
   CliAppInfo,
@@ -192,9 +192,9 @@ const SLASH_PALETTE_GAP_PX = 8;
 const SLASH_PALETTE_MAX_HEIGHT_PX = 288;
 const SLASH_PALETTE_MIN_HEIGHT_PX = 144;
 const SLASH_PALETTE_CHROME_PX = 12;
-const SLASH_RECENTS_STORAGE_KEY = "nanobot.webui.slashCommandRecents";
+const SLASH_RECENTS_STORAGE_KEY = "openbot.webui.slashCommandRecents";
 const SLASH_RECENTS_LIMIT = 5;
-const QUEUED_PROMPTS_STORAGE_PREFIX = "nanobot.webui.composerQueuedGuidance.v1:";
+const QUEUED_PROMPTS_STORAGE_PREFIX = "openbot.webui.composerQueuedGuidance.v1:";
 const QUEUED_PROMPTS_LIMIT = 20;
 const QUEUED_PROMPT_MAX_CHARS = 4000;
 
@@ -648,10 +648,10 @@ function RunElapsedStrip({
       {goalPanelOpen && canExpandGoal && markdownBody ? (
         <div
           ref={panelRef}
-          id="nanobot-goal-panel-root"
+          id="openbot-goal-panel-root"
           role="dialog"
           aria-modal="false"
-          aria-labelledby="nanobot-goal-panel-title"
+          aria-labelledby="openbot-goal-panel-title"
           tabIndex={-1}
           className={cn(
             "absolute bottom-[calc(100%+8px)] left-3 right-3 z-[50] flex max-w-none flex-col overflow-hidden",
@@ -662,7 +662,7 @@ function RunElapsedStrip({
         >
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-black/[0.06] px-3 py-2 dark:border-white/[0.08]">
             <h2
-              id="nanobot-goal-panel-title"
+              id="openbot-goal-panel-title"
               className="min-w-0 truncate text-[13px] font-semibold tracking-tight text-foreground"
             >
               {t("thread.composer.goalStateSheetTitle")}
@@ -681,7 +681,7 @@ function RunElapsedStrip({
             </button>
           </div>
           <div
-            id="nanobot-goal-panel-scroll"
+            id="openbot-goal-panel-scroll"
             className="min-h-0 flex-1 overflow-y-auto scrollbar-thin px-3 pb-3 pt-2"
           >
             <MarkdownText className="max-w-none text-[13.5px] leading-relaxed text-foreground/90">
@@ -723,7 +723,7 @@ function RunElapsedStrip({
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             )}
             aria-expanded={goalPanelOpen}
-            aria-controls={goalPanelOpen ? "nanobot-goal-panel-root" : undefined}
+            aria-controls={goalPanelOpen ? "openbot-goal-panel-root" : undefined}
             aria-label={t("thread.composer.goalStateExpandAria")}
             title={t("thread.composer.goalStateExpandAria")}
             onClick={() => setGoalPanelOpen((o) => !o)}

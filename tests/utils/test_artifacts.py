@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.config.loader import set_config_path
-from nanobot.utils.artifacts import (
+from openbot.config.loader import set_config_path
+from openbot.utils.artifacts import (
     ArtifactError,
     decode_image_data_url,
     store_generated_image_artifact,

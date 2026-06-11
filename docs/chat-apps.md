@@ -1,16 +1,16 @@
 # Chat Apps
 
-Connect nanobot to your favorite chat platform. Want to build your own? See the [Channel Plugin Guide](./channel-plugin-guide.md).
+Connect openbot to your favorite chat platform. Want to build your own? See the [Channel Plugin Guide](./channel-plugin-guide.md).
 
 Before configuring a chat app, make sure the local CLI path works:
 
 ```bash
-nanobot agent -m "Hello!"
+openbot agent -m "Hello!"
 ```
 
-If that fails, fix installation, config, provider, or model setup first with [`quick-start.md`](./quick-start.md), [`providers.md`](./providers.md), and [`troubleshooting.md`](./troubleshooting.md). Chat apps require `nanobot gateway` to stay running after the channel is configured.
+If that fails, fix installation, config, provider, or model setup first with [`quick-start.md`](./quick-start.md), [`providers.md`](./providers.md), and [`troubleshooting.md`](./troubleshooting.md). Chat apps require `openbot gateway` to stay running after the channel is configured.
 
-Most examples below are snippets to merge into `~/.nanobot/config.json`.
+Most examples below are snippets to merge into `~/.openbot/config.json`.
 
 ## Common Setup Pattern
 
@@ -18,23 +18,23 @@ Every chat app uses the same shape:
 
 1. Create or prepare the bot/account in the chat platform.
 2. Copy the token, secret, QR login state, webhook URL, or account ID that platform gives you.
-3. Merge that platform's JSON snippet into `~/.nanobot/config.json`.
+3. Merge that platform's JSON snippet into `~/.openbot/config.json`.
 4. Keep access control narrow at first with `allowFrom` or the platform-specific allow list.
-5. Check that nanobot can see the configured channel:
+5. Check that openbot can see the configured channel:
 
 ```bash
-nanobot channels status
+openbot channels status
 ```
 
 6. Start the gateway and leave that terminal running:
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 7. Send a message from the allowed account. In group chats, follow that channel's `groupPolicy` behavior: many channels default to mention-only, while Matrix and WhatsApp default to open group replies.
 
-If `nanobot channels status` does not show the channel as enabled, the config snippet is in the wrong place, the channel name is misspelled, or the config file you edited is not the one nanobot is reading. If the channel is enabled but messages do not arrive, run `nanobot gateway --verbose` and compare the platform-side credentials, event permissions, and allow lists.
+If `openbot channels status` does not show the channel as enabled, the config snippet is in the wrong place, the channel name is misspelled, or the config file you edited is not the one openbot is reading. If the channel is enabled but messages do not arrive, run `openbot gateway --verbose` and compare the platform-side credentials, event permissions, and allow lists.
 
 > `["*"]` allows anyone who can reach that channel to talk to the bot. Use it only when that is intentional, or temporarily while testing in a private sandbox.
 
@@ -42,8 +42,8 @@ If `nanobot channels status` does not show the channel as enabled, the config sn
 |---------|---------------|
 | **Telegram** | Bot token from @BotFather |
 | **Discord** | Bot token + Message Content intent |
-| **WhatsApp** | QR code scan (`nanobot channels login whatsapp`) |
-| **WeChat (Weixin)** | QR code scan (`nanobot channels login weixin`) |
+| **WhatsApp** | QR code scan (`openbot channels login whatsapp`) |
+| **WeChat (Weixin)** | QR code scan (`openbot channels login weixin`) |
 | **Feishu** | App ID + App Secret |
 | **DingTalk** | App Key + App Secret |
 | **Slack** | Bot token + App-Level token |
@@ -84,12 +84,12 @@ If `nanobot channels status` does not show the channel as enabled, the config sn
 **3. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 **Webhook mode (optional)**
 
-Telegram uses long polling by default. To receive updates through a webhook, expose a public HTTPS URL that forwards to nanobot's local listener and set `mode` to `webhook`:
+Telegram uses long polling by default. To receive updates through a webhook, expose a public HTTPS URL that forwards to openbot's local listener and set `mode` to `webhook`:
 
 ```json
 {
@@ -110,9 +110,9 @@ Telegram uses long polling by default. To receive updates through a webhook, exp
 }
 ```
 
-> `webhookSecretToken` is required in webhook mode. Do not expose the local webhook listener directly to the public internet without a reverse proxy or tunnel in front of it. TLS/Host policy is handled by your proxy; nanobot only listens on `webhookListenHost:webhookListenPort` and validates Telegram's webhook secret token. `webhookMaxConnections` defaults to `4`; nanobot still serializes Telegram updates per conversation before forwarding them to the agent.
+> `webhookSecretToken` is required in webhook mode. Do not expose the local webhook listener directly to the public internet without a reverse proxy or tunnel in front of it. TLS/Host policy is handled by your proxy; openbot only listens on `webhookListenHost:webhookListenPort` and validates Telegram's webhook secret token. `webhookMaxConnections` defaults to `4`; openbot still serializes Telegram updates per conversation before forwarding them to the agent.
 >
-> `webhookUrl` is the public HTTPS URL registered with Telegram. `webhookPath` is the local path nanobot listens on. They often use the same path, but may differ when a reverse proxy or tunnel rewrites the request path.
+> `webhookUrl` is the public HTTPS URL registered with Telegram. `webhookPath` is the local path openbot listens on. They often use the same path, but may differ when a reverse proxy or tunnel rewrites the request path.
 
 </details>
 
@@ -121,30 +121,30 @@ Telegram uses long polling by default. To receive updates through a webhook, exp
 
 Uses **Socket.IO WebSocket** by default, with HTTP polling fallback.
 
-**1. Ask nanobot to set up Mochat for you**
+**1. Ask openbot to set up Mochat for you**
 
-Simply send this message to nanobot (replace `xxx@xxx` with your real email):
+Simply send this message to openbot (replace `xxx@xxx` with your real email):
 
 ```
-Read https://raw.githubusercontent.com/HKUDS/MoChat/refs/heads/main/skills/nanobot/skill.md and register on MoChat. My Email account is xxx@xxx Bind me as your owner and DM me on MoChat.
+Read https://raw.githubusercontent.com/HKUDS/MoChat/refs/heads/main/skills/openbot/skill.md and register on MoChat. My Email account is xxx@xxx Bind me as your owner and DM me on MoChat.
 ```
 
-nanobot will automatically register, configure `~/.nanobot/config.json`, and connect to Mochat.
+openbot will automatically register, configure `~/.openbot/config.json`, and connect to Mochat.
 
 **2. Restart gateway**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
-That's it — nanobot handles the rest!
+That's it — openbot handles the rest!
 
 <br>
 
 <details>
 <summary>Manual configuration (advanced)</summary>
 
-If you prefer to configure manually, add the following to `~/.nanobot/config.json`:
+If you prefer to configure manually, add the following to `~/.openbot/config.json`:
 
 > Keep `claw_token` private. It should only be sent in `X-Claw-Token` header to your Mochat API endpoint.
 
@@ -223,7 +223,7 @@ If you prefer to configure manually, add the following to `~/.nanobot/config.jso
 **6. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 </details>
@@ -234,7 +234,7 @@ nanobot gateway
 Install Matrix dependencies first:
 
 ```bash
-python -m pip install "nanobot-ai[matrix]"
+python -m pip install "openbot-ai[matrix]"
 ```
 
 > [!NOTE]
@@ -248,7 +248,7 @@ python -m pip install "nanobot-ai[matrix]"
 **2. Get credentials**
 
 - You need:
-  - `userId` (example: `@nanobot:matrix.org`)
+  - `userId` (example: `@openbot:matrix.org`)
   - `password`
 
 (Note: `accessToken` and `deviceId` are still supported for legacy reasons, but for reliable encryption, password login is recommended instead. If the `password` is provided, `accessToken` and `deviceId` will be ignored.)
@@ -261,7 +261,7 @@ python -m pip install "nanobot-ai[matrix]"
     "matrix": {
       "enabled": true,
       "homeserver": "https://matrix.org",
-      "userId": "@nanobot:matrix.org",
+      "userId": "@openbot:matrix.org",
       "password": "mypasswordhere",
       "e2eeEnabled": true,
       "sasVerification": true,
@@ -293,7 +293,7 @@ python -m pip install "nanobot-ai[matrix]"
 **4. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 </details>
@@ -306,7 +306,7 @@ Requires **Node.js ≥18**.
 **1. Link device**
 
 ```bash
-nanobot channels login whatsapp
+openbot channels login whatsapp
 # Scan QR with WhatsApp → Settings → Linked Devices
 ```
 
@@ -327,14 +327,14 @@ nanobot channels login whatsapp
 
 ```bash
 # Terminal 1
-nanobot channels login whatsapp
+openbot channels login whatsapp
 
 # Terminal 2
-nanobot gateway
+openbot gateway
 ```
 
-> WhatsApp bridge updates are not applied automatically for existing installations. After upgrading nanobot, rebuild the local bridge with:
-> `rm -rf ~/.nanobot/bridge && nanobot channels login whatsapp`
+> WhatsApp bridge updates are not applied automatically for existing installations. After upgrading openbot, rebuild the local bridge with:
+> `rm -rf ~/.openbot/bridge && openbot channels login whatsapp`
 
 </details>
 
@@ -348,10 +348,10 @@ Uses **WebSocket** long connection — no public IP required.
 - Create a new app → Enable **Bot** capability
 - **Permissions**:
   - `im:message` (send messages) and `im:message.p2p_msg:readonly` (receive messages)
-  - **Streaming replies** (default in nanobot): add **`cardkit:card:write`** (often labeled **Create and update cards** in the Feishu developer console). Required for CardKit entities and streamed assistant text. Older apps may not have it yet — open **Permission management**, enable the scope, then **publish** a new app version if the console requires it.
+  - **Streaming replies** (default in openbot): add **`cardkit:card:write`** (often labeled **Create and update cards** in the Feishu developer console). Required for CardKit entities and streamed assistant text. Older apps may not have it yet — open **Permission management**, enable the scope, then **publish** a new app version if the console requires it.
   - If you **cannot** add `cardkit:card:write`, set `"streaming": false` under `channels.feishu` (see below). The bot still works; replies use normal interactive cards without token-by-token streaming.
 - **Events**: Add `im.message.receive_v1` (receive messages)
-  - Select **Long Connection** mode (requires running nanobot first to establish connection)
+  - Select **Long Connection** mode (requires running openbot first to establish connection)
 - Get **App ID** and **App Secret** from "Credentials & Basic Info"
 - Publish the app
 
@@ -380,7 +380,7 @@ Uses **WebSocket** long connection — no public IP required.
 
 > `streaming` defaults to `true`. Use `false` if your app does not have **`cardkit:card:write`** (see permissions above).
 > `encryptKey` and `verificationToken` are optional for Long Connection mode.
-> `allowFrom`: Add your open_id (find it in nanobot logs when you message the bot). Use `["*"]` to allow all users.
+> `allowFrom`: Add your open_id (find it in openbot logs when you message the bot). Use `["*"]` to allow all users.
 > `groupPolicy`: `"mention"` (default — respond only when @mentioned), `"open"` (respond to all group messages). Private chats always respond.
 > `reactEmoji`: Emoji for "processing" status (default: `OnIt`). See [available emojis](https://open.larkoffice.com/document/server-docs/im-v1/message-reaction/emojis-introduce).
 > `doneEmoji`: Optional emoji for "completed" status (e.g., `DONE`, `OK`, `HEART`). When set, bot adds this reaction after removing `reactEmoji`.
@@ -390,7 +390,7 @@ Uses **WebSocket** long connection — no public IP required.
 **3. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 > [!TIP]
@@ -415,7 +415,7 @@ Uses **botpy SDK** with WebSocket — no public IP required. Currently supports 
 
 **3. Configure**
 
-> - `allowFrom`: Add your openid (find it in nanobot logs when you message the bot). Use `["*"]` for public access.
+> - `allowFrom`: Add your openid (find it in openbot logs when you message the bot). Use `["*"]` for public access.
 > - `msgFormat`: Optional. Use `"plain"` (default) for maximum compatibility with legacy QQ clients, or `"markdown"` for richer formatting on newer clients.
 > - For production: submit a review in the bot console and publish. See [QQ Bot Docs](https://bot.q.qq.com/wiki/) for the full publishing flow.
 
@@ -436,7 +436,7 @@ Uses **botpy SDK** with WebSocket — no public IP required. Currently supports 
 **4. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 Now send a message to the bot from QQ — it should respond!
@@ -524,7 +524,7 @@ Uses **Stream Mode** — no public IP required.
 **3. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 </details>
@@ -545,9 +545,9 @@ Uses **Socket Mode** — no public URL required.
 - **App Home**: Scroll to **Show Tabs** → Enable **Messages Tab** → Check **"Allow users to send Slash commands and messages from the messages tab"**
 - **Install App**: Click **Install to Workspace** → Authorize → copy the **Bot Token** (`xoxb-...`)
 
-> `files:read` is required to read files users send to nanobot. `files:write` is required for nanobot to send images, videos, and other file uploads. If you add either scope later, reinstall the Slack app to the workspace and restart nanobot so it uses the updated bot token.
+> `files:read` is required to read files users send to openbot. `files:write` is required for openbot to send images, videos, and other file uploads. If you add either scope later, reinstall the Slack app to the workspace and restart openbot so it uses the updated bot token.
 
-**3. Configure nanobot**
+**3. Configure openbot**
 
 ```json
 {
@@ -566,7 +566,7 @@ Uses **Socket Mode** — no public URL required.
 **4. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 DM the bot directly or @mention it in a channel — it should respond!
@@ -580,10 +580,10 @@ DM the bot directly or @mention it in a channel — it should respond!
 <details>
 <summary><b>Email</b></summary>
 
-Give nanobot its own email account. It polls **IMAP** for incoming mail and replies via **SMTP** — like a personal email assistant.
+Give openbot its own email account. It polls **IMAP** for incoming mail and replies via **SMTP** — like a personal email assistant.
 
 **1. Get credentials (Gmail example)**
-- Create a dedicated Gmail account for your bot (e.g. `my-nanobot@gmail.com`)
+- Create a dedicated Gmail account for your bot (e.g. `my-openbot@gmail.com`)
 - Enable 2-Step Verification → Create an [App Password](https://myaccount.google.com/apppasswords)
 - Use this app password for both IMAP and SMTP
 
@@ -610,13 +610,13 @@ Give nanobot its own email account. It polls **IMAP** for incoming mail and repl
       "consentGranted": true,
       "imapHost": "imap.gmail.com",
       "imapPort": 993,
-      "imapUsername": "my-nanobot@gmail.com",
+      "imapUsername": "my-openbot@gmail.com",
       "imapPassword": "your-app-password",
       "smtpHost": "smtp.gmail.com",
       "smtpPort": 587,
-      "smtpUsername": "my-nanobot@gmail.com",
+      "smtpUsername": "my-openbot@gmail.com",
       "smtpPassword": "your-app-password",
-      "fromAddress": "my-nanobot@gmail.com",
+      "fromAddress": "my-openbot@gmail.com",
       "allowFrom": ["your-real-email@gmail.com"],
       "postAction": "move",
       "postActionMoveMailbox": "[Gmail]/Trash",
@@ -632,7 +632,7 @@ Give nanobot its own email account. It polls **IMAP** for incoming mail and repl
 **3. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 </details>
@@ -645,7 +645,7 @@ Uses **HTTP long-poll** with QR-code login via the ilinkai personal WeChat API. 
 **1. Install with WeChat support**
 
 ```bash
-python -m pip install "nanobot-ai[weixin]"
+python -m pip install "openbot-ai[weixin]"
 ```
 
 **2. Configure**
@@ -661,28 +661,28 @@ python -m pip install "nanobot-ai[weixin]"
 }
 ```
 
-> - `allowFrom`: Add the sender ID you see in nanobot logs for your WeChat account. Use `["*"]` to allow all users.
-> - `token`: Optional. If omitted, log in interactively and nanobot will save the token for you.
-> - `routeTag`: Optional. When your upstream Weixin deployment requires request routing, nanobot will send it as the `SKRouteTag` header.
-> - `stateDir`: Optional. Defaults to nanobot's runtime directory for Weixin state.
+> - `allowFrom`: Add the sender ID you see in openbot logs for your WeChat account. Use `["*"]` to allow all users.
+> - `token`: Optional. If omitted, log in interactively and openbot will save the token for you.
+> - `routeTag`: Optional. When your upstream Weixin deployment requires request routing, openbot will send it as the `SKRouteTag` header.
+> - `stateDir`: Optional. Defaults to openbot's runtime directory for Weixin state.
 > - `pollTimeout`: Optional long-poll timeout in seconds.
 
 **3. Login**
 
 ```bash
-nanobot channels login weixin
+openbot channels login weixin
 ```
 
 Use `--force` to re-authenticate and ignore any saved token:
 
 ```bash
-nanobot channels login weixin --force
+openbot channels login weixin --force
 ```
 
 **4. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 </details>
@@ -697,7 +697,7 @@ nanobot gateway
 **1. Install the optional dependency**
 
 ```bash
-python -m pip install "nanobot-ai[wecom]"
+python -m pip install "openbot-ai[wecom]"
 ```
 
 **2. Create a WeCom AI Bot**
@@ -722,7 +722,7 @@ Go to the WeCom admin console → Intelligent Robot → Create Robot → select 
 **4. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 </details>
@@ -736,7 +736,7 @@ nanobot gateway
 **1. Install the optional dependency**
 
 ```bash
-python -m pip install "nanobot-ai[msteams]"
+python -m pip install "openbot-ai[msteams]"
 ```
 
 **2. Create a Teams / Azure bot app registration**
@@ -770,7 +770,7 @@ Create or reuse a Microsoft Teams / Azure bot app registration. Set the bot mess
 ```
 
 > - `replyInThread: true` replies to the triggering Teams activity when a stored `activity_id` is available.
-> - `mentionOnlyResponse` controls what Nanobot receives when a user sends only a bot mention (`<at>Nanobot</at>`). Set to `""` to ignore mention-only messages.
+> - `mentionOnlyResponse` controls what openbot receives when a user sends only a bot mention (`<at>openbot</at>`). Set to `""` to ignore mention-only messages.
 > - `validateInboundAuth: true` enables inbound Bot Framework bearer-token validation (signature, issuer, audience, lifetime, `serviceUrl`). This is the safe default for public deployments. Only set it to `false` for local development or tightly controlled testing.
 > - `refTtlDays` (default `30`) controls how old stored conversation refs can be before they are pruned.
 > - `pruneWebChatRefs` (default `true`) drops refs with `webchat.botframework.com` service URLs.
@@ -780,7 +780,7 @@ Create or reuse a Microsoft Teams / Azure bot app registration. Set the bot mess
 **4. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 </details>
@@ -842,7 +842,7 @@ signal-cli -a +1234567890 daemon --http localhost:8080
 **3. Run**
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 > [!TIP]

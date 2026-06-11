@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from nanobot.webui.thread_disk import delete_webui_thread, webui_thread_file_path
-from nanobot.webui.transcript import (
+from openbot.webui.thread_disk import delete_webui_thread, webui_thread_file_path
+from openbot.webui.transcript import (
     append_transcript_object,
     webui_transcript_path,
     webui_transcript_segments_dir,
@@ -11,9 +11,9 @@ from nanobot.webui.transcript import (
 
 
 def test_delete_webui_thread_removes_legacy_json_and_transcript(tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
-    monkeypatch.setattr("nanobot.webui.transcript._MAX_TRANSCRIPT_FILE_BYTES", 520)
-    monkeypatch.setattr("nanobot.webui.transcript._TARGET_ACTIVE_TRANSCRIPT_BYTES", 260)
+    monkeypatch.setattr("openbot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("openbot.webui.transcript._MAX_TRANSCRIPT_FILE_BYTES", 520)
+    monkeypatch.setattr("openbot.webui.transcript._TARGET_ACTIVE_TRANSCRIPT_BYTES", 260)
     key = "websocket:k1"
     json_path = webui_thread_file_path(key)
     json_path.parent.mkdir(parents=True, exist_ok=True)

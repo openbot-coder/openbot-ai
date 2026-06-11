@@ -113,10 +113,10 @@ function showDesktopNotification(
   const notification = new Notification({
     title: notificationTitle(frame.source),
     body: notificationBody(frame.text),
-    subtitle: "nanobot",
+    subtitle: "openbot",
   });
   notification.on("failed", (_event, error) => {
-    console.warn(`[nanobot] Desktop notification failed: ${error}`);
+    console.warn(`[openbot] Desktop notification failed: ${error}`);
   });
   notification.on("click", () => openChatFromNotification(frame.chat_id, options));
   notification.show();
@@ -129,7 +129,7 @@ function notificationTitle(source: NotificationSource | undefined): string {
     const label = source.label.trim();
     if (label) return truncateText(label, MAX_NOTIFICATION_TITLE_LENGTH);
   }
-  return "nanobot";
+  return "openbot";
 }
 
 function notificationBody(text: string): string {

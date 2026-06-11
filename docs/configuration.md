@@ -1,17 +1,17 @@
 # Configuration
 
-Config file: `~/.nanobot/config.json`
+Config file: `~/.openbot/config.json`
 
 This is the full reference. If this is your first install, start with [`quick-start.md`](./quick-start.md). If you are trying to choose a model or fix provider/model matching, use [`providers.md`](./providers.md) first and come back here for exact fields and advanced options.
 
 The JSON examples below are usually partial snippets to merge into your existing config, not full replacement files. For the mental model behind config, workspace, gateway, channels, sessions, tools, and memory, see [`concepts.md`](./concepts.md).
 
-The generated `config.json` uses camelCase keys such as `apiKey` and `intervalS`. snake_case keys are also accepted for compatibility, but the docs prefer camelCase because that is what nanobot writes back to disk.
+The generated `config.json` uses camelCase keys such as `apiKey` and `intervalS`. snake_case keys are also accepted for compatibility, but the docs prefer camelCase because that is what openbot writes back to disk.
 
 For setup and runtime failures, follow the diagnosis order in [`troubleshooting.md`](./troubleshooting.md) before changing multiple config areas at once.
 
 > [!NOTE]
-> If your config file is older than the current schema, you can refresh it without overwriting your existing values: run `nanobot onboard`, then answer `N` when asked whether to overwrite the config. nanobot will merge in missing default fields and keep your current settings.
+> If your config file is older than the current schema, you can refresh it without overwriting your existing values: run `openbot onboard`, then answer `N` when asked whether to overwrite the config. openbot will merge in missing default fields and keep your current settings.
 
 ## Quick Jump
 
@@ -37,17 +37,17 @@ If you are not sure where a setting belongs, start from the task you are trying 
 
 | Task | First keys to check | Verify with | Deep dive |
 |---|---|---|---|
-| Make the first model reply work | `providers.<name>.apiKey`, optional `providers.<name>.apiBase`, `modelPresets.<preset>`, `agents.defaults.modelPreset` | `nanobot status`, then `nanobot agent -m "Hello!"` | [Providers](#providers), [Model Presets](#model-presets) |
-| Add fallback models | `modelPresets.<fallback>`, `agents.defaults.fallbackModels` | `nanobot status`, then a normal agent run | [Model Fallbacks](#model-fallbacks) |
-| Keep secrets out of the config file | `${ENV_VAR}` placeholders inside any string value | Start nanobot from the same environment that sets the variable | [Environment Variables for Secrets](#environment-variables-for-secrets) |
-| Open the bundled WebUI | `channels.websocket.enabled`, optional `channels.websocket.port`, `channels.websocket.tokenIssueSecret` | `nanobot gateway`, then open `http://127.0.0.1:8765` | [Channel Settings](#channel-settings), [WebSocket docs](./websocket.md) |
-| Connect one chat app | `channels.<channel>.enabled`, channel credentials, `channels.<channel>.allowFrom` | `nanobot channels status`, then `nanobot gateway --verbose` | [Channel Settings](#channel-settings), [Chat Apps](./chat-apps.md) |
+| Make the first model reply work | `providers.<name>.apiKey`, optional `providers.<name>.apiBase`, `modelPresets.<preset>`, `agents.defaults.modelPreset` | `openbot status`, then `openbot agent -m "Hello!"` | [Providers](#providers), [Model Presets](#model-presets) |
+| Add fallback models | `modelPresets.<fallback>`, `agents.defaults.fallbackModels` | `openbot status`, then a normal agent run | [Model Fallbacks](#model-fallbacks) |
+| Keep secrets out of the config file | `${ENV_VAR}` placeholders inside any string value | Start openbot from the same environment that sets the variable | [Environment Variables for Secrets](#environment-variables-for-secrets) |
+| Open the bundled WebUI | `channels.websocket.enabled`, optional `channels.websocket.port`, `channels.websocket.tokenIssueSecret` | `openbot gateway`, then open `http://127.0.0.1:8765` | [Channel Settings](#channel-settings), [WebSocket docs](./websocket.md) |
+| Connect one chat app | `channels.<channel>.enabled`, channel credentials, `channels.<channel>.allowFrom` | `openbot channels status`, then `openbot gateway --verbose` | [Channel Settings](#channel-settings), [Chat Apps](./chat-apps.md) |
 | Enable voice transcription | `transcription.enabled`, `transcription.provider`, matching `providers.<name>.apiKey` | Send or upload a short voice message through a configured surface | [Transcription Settings](#transcription-settings) |
 | Enable web search or fetch | `tools.web.search.*`, `tools.web.fetch.*`, optional `tools.ssrfWhitelist` | Ask a question that requires current web information, then inspect logs if needed | [Web Tools](#web-tools), [Security](#security) |
 | Enable image generation | `tools.imageGeneration.enabled`, `tools.imageGeneration.provider`, `tools.imageGeneration.model`, matching provider credentials | Enable Image Generation in the WebUI and send one image request | [Image Generation](#image-generation) |
-| Add external tools through MCP | `tools.mcpServers.<name>` | Start `nanobot gateway --verbose` and check startup/tool logs | [MCP](#mcp-model-context-protocol) |
+| Add external tools through MCP | `tools.mcpServers.<name>` | Start `openbot gateway --verbose` and check startup/tool logs | [MCP](#mcp-model-context-protocol) |
 | Tighten tool and network safety | `tools.restrictToWorkspace`, `tools.exec.sandbox`, `tools.ssrfWhitelist`, `channels.*.allowFrom` | Run the same workflow through the channel or CLI you plan to expose | [Security](#security), [Pairing](#pairing) |
-| Run multiple isolated bots | separate `--config` and `--workspace` paths, plus distinct `gateway.port` or channel ports when processes run together | Start each process with explicit paths and run `nanobot status` for the default instance only | [Multiple Instances](./multiple-instances.md), [CLI Reference](./cli-reference.md) |
+| Run multiple isolated bots | separate `--config` and `--workspace` paths, plus distinct `gateway.port` or channel ports when processes run together | Start each process with explicit paths and run `openbot status` for the default instance only | [Multiple Instances](./multiple-instances.md), [CLI Reference](./cli-reference.md) |
 | Observe model calls | `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_BASE_URL` environment variables | Run one model call, then check the matching Langfuse project | [Langfuse Observability](#langfuse-observability) |
 
 ## Environment Variables for Secrets
@@ -69,9 +69,9 @@ Instead of storing secrets directly in `config.json`, you can use `${VAR_NAME}` 
 }
 ```
 
-Any string value in `config.json` can use `${VAR_NAME}`. Resolution runs once at startup, in memory only — resolved values are never written back to disk, so editing config through `nanobot onboard` or the WebUI preserves the placeholder.
+Any string value in `config.json` can use `${VAR_NAME}`. Resolution runs once at startup, in memory only — resolved values are never written back to disk, so editing config through `openbot onboard` or the WebUI preserves the placeholder.
 
-If a referenced variable is unset, nanobot fails fast at startup with `ValueError: Environment variable 'NAME' referenced in config is not set`.
+If a referenced variable is unset, openbot fails fast at startup with `ValueError: Environment variable 'NAME' referenced in config is not set`.
 
 ### More examples
 
@@ -112,20 +112,20 @@ If a referenced variable is unset, nanobot fails fast at startup with `ValueErro
 
 ### Loading variables at startup
 
-Pick whatever fits your deployment — nanobot only reads `os.environ` at startup, so any mechanism that populates the process environment works.
+Pick whatever fits your deployment — openbot only reads `os.environ` at startup, so any mechanism that populates the process environment works.
 
 **systemd** — use `EnvironmentFile=` in the service unit to load variables from a file that only the deploying user can read:
 
 ```ini
-# /etc/systemd/system/nanobot.service (excerpt)
+# /etc/systemd/system/openbot.service (excerpt)
 [Service]
-EnvironmentFile=/home/youruser/nanobot_secrets.env
-User=nanobot
+EnvironmentFile=/home/youruser/openbot_secrets.env
+User=openbot
 ExecStart=...
 ```
 
 ```bash
-# /home/youruser/nanobot_secrets.env (mode 600, owned by youruser)
+# /home/youruser/openbot_secrets.env (mode 600, owned by youruser)
 TELEGRAM_TOKEN=your-token-here
 IMAP_PASSWORD=your-password-here
 ```
@@ -133,9 +133,9 @@ IMAP_PASSWORD=your-password-here
 **Docker** — pass an env file to the locally built image (one `KEY=VALUE` per line), or use `-e KEY=value`:
 
 ```bash
-docker run --rm --env-file=./nanobot.env \
-  -v ~/.nanobot:/home/nanobot/.nanobot \
-  nanobot agent -m "Hello"
+docker run --rm --env-file=./openbot.env \
+  -v ~/.openbot:/home/openbot/.openbot \
+  openbot agent -m "Hello"
 ```
 
 **direnv** — drop a `.envrc` in your working directory and run `direnv allow`:
@@ -150,26 +150,26 @@ export ANTHROPIC_API_KEY=...
 
 ```bash
 # 1Password — references in .env.tpl look like `op://Vault/Item/field`
-op run --env-file=.env.tpl -- nanobot agent
+op run --env-file=.env.tpl -- openbot agent
 
 # pass (passwordstore.org)
-ANTHROPIC_API_KEY="$(pass show api/anthropic)" nanobot agent
+ANTHROPIC_API_KEY="$(pass show api/anthropic)" openbot agent
 
 # Bitwarden
-ANTHROPIC_API_KEY="$(bw get password api/anthropic)" nanobot agent
+ANTHROPIC_API_KEY="$(bw get password api/anthropic)" openbot agent
 ```
 
 ## Langfuse Observability
 
-nanobot can trace OpenAI-compatible provider calls through Langfuse's OpenAI SDK wrapper. This is configured with environment variables, not `config.json`.
+openbot can trace OpenAI-compatible provider calls through Langfuse's OpenAI SDK wrapper. This is configured with environment variables, not `config.json`.
 
-Install the optional package in the same Python environment that runs nanobot:
+Install the optional package in the same Python environment that runs openbot:
 
 ```bash
 python -m pip install langfuse
 ```
 
-Set Langfuse credentials before starting `nanobot agent`, `nanobot gateway`, or `nanobot serve`:
+Set Langfuse credentials before starting `openbot agent`, `openbot gateway`, or `openbot serve`:
 
 ```bash
 export LANGFUSE_SECRET_KEY="sk-lf-..."
@@ -185,19 +185,19 @@ $env:LANGFUSE_PUBLIC_KEY = "pk-lf-..."
 $env:LANGFUSE_BASE_URL = "https://cloud.langfuse.com"
 ```
 
-When `LANGFUSE_SECRET_KEY` is set and the `langfuse` package is installed, nanobot uses `langfuse.openai.AsyncOpenAI` for OpenAI-compatible providers so model requests are sent to Langfuse in the background. If the secret key is set but `langfuse` is missing, nanobot logs a warning and falls back to the regular OpenAI client.
+When `LANGFUSE_SECRET_KEY` is set and the `langfuse` package is installed, openbot uses `langfuse.openai.AsyncOpenAI` for OpenAI-compatible providers so model requests are sent to Langfuse in the background. If the secret key is set but `langfuse` is missing, openbot logs a warning and falls back to the regular OpenAI client.
 
 Use the Langfuse region or self-hosted URL that matches your project. The [Langfuse OpenAI SDK docs](https://langfuse.com/integrations/model-providers/openai-py) use `LANGFUSE_BASE_URL` for cloud regions and self-hosted instances.
 
-Tracing covers the providers that go through nanobot's OpenAI-compatible client path. Native providers that do not use that client may not produce Langfuse OpenAI-wrapper traces.
+Tracing covers the providers that go through openbot's OpenAI-compatible client path. Native providers that do not use that client may not produce Langfuse OpenAI-wrapper traces.
 
 ## Providers
 
 > [!TIP]
 > - **Voice transcription**: Voice messages and WebUI/desktop microphone input use the shared top-level `transcription` settings. The default `transcription.provider` value is `"groq"`; set it to `"openai"` for OpenAI Whisper, `"openrouter"` for OpenRouter speech-to-text models, `"xiaomi_mimo"` for Xiaomi MiMo ASR, or `"assemblyai"` for AssemblyAI. API keys still live in the matching `providers.<provider>` config.
-> - **MiniMax Coding Plan**: Exclusive discount links for the nanobot community: [Overseas](https://platform.minimax.io/subscribe/coding-plan?code=9txpdXw04g&source=link) · [Mainland China](https://platform.minimaxi.com/subscribe/token-plan?code=GILTJpMTqZ&source=link)
+> - **MiniMax Coding Plan**: Exclusive discount links for the openbot community: [Overseas](https://platform.minimax.io/subscribe/coding-plan?code=9txpdXw04g&source=link) · [Mainland China](https://platform.minimaxi.com/subscribe/token-plan?code=GILTJpMTqZ&source=link)
 > - **MiniMax (Mainland China)**: If your API key is from MiniMax's mainland China platform (minimaxi.com), set `"apiBase": "https://api.minimaxi.com/v1"` in your minimax provider config.
-> - **MiniMax thinking mode**: `providers.minimaxAnthropic` is the config block for `reasoningEffort` / thinking mode. MiniMax exposes that capability through its Anthropic-compatible endpoint, so nanobot keeps it as a separate provider instead of guessing MiniMax-specific thinking parameters on the generic OpenAI-compatible `minimax` endpoint. It uses the same `MINIMAX_API_KEY`. Default Anthropic-compatible base URL: `https://api.minimax.io/anthropic`; for mainland China use `https://api.minimaxi.com/anthropic`.
+> - **MiniMax thinking mode**: `providers.minimaxAnthropic` is the config block for `reasoningEffort` / thinking mode. MiniMax exposes that capability through its Anthropic-compatible endpoint, so openbot keeps it as a separate provider instead of guessing MiniMax-specific thinking parameters on the generic OpenAI-compatible `minimax` endpoint. It uses the same `MINIMAX_API_KEY`. Default Anthropic-compatible base URL: `https://api.minimax.io/anthropic`; for mainland China use `https://api.minimaxi.com/anthropic`.
 > - **VolcEngine / BytePlus Coding Plan**: Subscription endpoints are configured through dedicated providers `volcengineCodingPlan` or `byteplusCodingPlan`, separate from the pay-per-use `volcengine` / `byteplus` providers.
 > - **Zhipu Coding Plan**: If you're on Zhipu's coding plan, set `"apiBase": "https://open.bigmodel.cn/api/coding/paas/v4"` in your zhipu provider config.
 > - **Alibaba Cloud BaiLian**: If you're using Alibaba Cloud BaiLian's OpenAI-compatible endpoint, set `"apiBase": "https://dashscope.aliyuncs.com/compatible-mode/v1"` in your dashscope provider config.
@@ -212,10 +212,10 @@ Tracing covers the providers that go through nanobot's OpenAI-compatible client 
 | `openrouter` | LLM gateway for hosted model families + Voice transcription (STT models) | [openrouter.ai](https://openrouter.ai) |
 | `huggingface` | LLM (Hugging Face Inference Providers) | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
 | `skywork` | LLM (Skywork / APIFree API gateway) | [apifree.ai](https://www.apifree.ai) |
-| `volcengine` | LLM (VolcEngine, pay-per-use) | [Coding Plan](https://www.volcengine.com/activity/codingplan?utm_campaign=nanobot&utm_content=nanobot&utm_medium=devrel&utm_source=OWO&utm_term=nanobot) · [volcengine.com](https://www.volcengine.com) |
-| `volcengine_coding_plan` | LLM (VolcEngine Coding Plan subscription endpoint) | [volcengine.com](https://www.volcengine.com/activity/codingplan?utm_campaign=nanobot&utm_content=nanobot&utm_medium=devrel&utm_source=OWO&utm_term=nanobot) |
-| `byteplus` | LLM (VolcEngine international, pay-per-use) | [Coding Plan](https://www.byteplus.com/en/activity/codingplan?utm_campaign=nanobot&utm_content=nanobot&utm_medium=devrel&utm_source=OWO&utm_term=nanobot) · [byteplus.com](https://www.byteplus.com) |
-| `byteplus_coding_plan` | LLM (BytePlus Coding Plan subscription endpoint) | [byteplus.com](https://www.byteplus.com/en/activity/codingplan?utm_campaign=nanobot&utm_content=nanobot&utm_medium=devrel&utm_source=OWO&utm_term=nanobot) |
+| `volcengine` | LLM (VolcEngine, pay-per-use) | [Coding Plan](https://www.volcengine.com/activity/codingplan?utm_campaign=openbot&utm_content=openbot&utm_medium=devrel&utm_source=OWO&utm_term=openbot) · [volcengine.com](https://www.volcengine.com) |
+| `volcengine_coding_plan` | LLM (VolcEngine Coding Plan subscription endpoint) | [volcengine.com](https://www.volcengine.com/activity/codingplan?utm_campaign=openbot&utm_content=openbot&utm_medium=devrel&utm_source=OWO&utm_term=openbot) |
+| `byteplus` | LLM (VolcEngine international, pay-per-use) | [Coding Plan](https://www.byteplus.com/en/activity/codingplan?utm_campaign=openbot&utm_content=openbot&utm_medium=devrel&utm_source=OWO&utm_term=openbot) · [byteplus.com](https://www.byteplus.com) |
+| `byteplus_coding_plan` | LLM (BytePlus Coding Plan subscription endpoint) | [byteplus.com](https://www.byteplus.com/en/activity/codingplan?utm_campaign=openbot&utm_content=openbot&utm_medium=devrel&utm_source=OWO&utm_term=openbot) |
 | `anthropic` | LLM (Claude direct) | [console.anthropic.com](https://console.anthropic.com) |
 | `azure_openai` | LLM (Azure OpenAI) | [portal.azure.com](https://portal.azure.com) |
 | `bedrock` | LLM (AWS Bedrock Converse, Claude/Nova/Llama/etc.) | [aws.amazon.com/bedrock](https://aws.amazon.com/bedrock/) |
@@ -243,14 +243,14 @@ Tracing covers the providers that go through nanobot's OpenAI-compatible client 
 | `ovms` | LLM (local, OpenVINO Model Server) | [docs.openvino.ai](https://docs.openvino.ai/2026/model-server/ovms_docs_llm_quickstart.html) |
 | `vllm` | LLM (local, any OpenAI-compatible server) | — |
 | `nvidia` | LLM (NVIDIA NIM) | [build.nvidia.com](https://build.nvidia.com/) |
-| `openai_codex` | LLM (Codex, OAuth) | `nanobot provider login openai-codex` |
-| `github_copilot` | LLM (GitHub Copilot, OAuth) | `nanobot provider login github-copilot` |
+| `openai_codex` | LLM (Codex, OAuth) | `openbot provider login openai-codex` |
+| `github_copilot` | LLM (GitHub Copilot, OAuth) | `openbot provider login github-copilot` |
 | `qianfan` | LLM (Baidu Qianfan) | [cloud.baidu.com](https://cloud.baidu.com/doc/qianfan/s/Hmh4suq26) |
 
 <details>
 <summary><b>OpenAI</b></summary>
 
-By default, OpenAI uses `apiType: "auto"`: nanobot calls Chat Completions normally and routes GPT-5/o-series or explicit `reasoningEffort` requests through the Responses API when useful. You can force a specific API surface:
+By default, OpenAI uses `apiType: "auto"`: openbot calls Chat Completions normally and routes GPT-5/o-series or explicit `reasoningEffort` requests through the Responses API when useful. You can force a specific API surface:
 
 ```json
 {
@@ -265,7 +265,7 @@ By default, OpenAI uses `apiType: "auto"`: nanobot calls Chat Completions normal
 
 Valid `apiType` values are exactly `auto`, `chat_completions`, and `responses`.
 
-`extraBody` follows the selected OpenAI API surface. With Chat Completions, nanobot passes it through as the SDK `extra_body` value. With Responses, configure it in Responses API body shape; nanobot merges ordinary top-level fields into the Responses request body, appends `extraBody.tools` after generated function tools, and merges `extraBody.include` without duplicates:
+`extraBody` follows the selected OpenAI API surface. With Chat Completions, openbot passes it through as the SDK `extra_body` value. With Responses, configure it in Responses API body shape; openbot merges ordinary top-level fields into the Responses request body, appends `extraBody.tools` after generated function tools, and merges `extraBody.include` without duplicates:
 
 ```json
 {
@@ -341,7 +341,7 @@ Omit `apiKey` (or leave it empty / unset). The provider falls back to [`DefaultA
 Install the optional dependency:
 
 ```bash
-python -m pip install 'nanobot-ai[azure]'
+python -m pip install 'openbot-ai[azure]'
 ```
 
 `DefaultAzureCredential` walks this chain in order and uses the first identity that succeeds:
@@ -356,7 +356,7 @@ python -m pip install 'nanobot-ai[azure]'
 
 The identity that ends up signing the request **must be assigned the `Cognitive Services OpenAI User` RBAC role** (or higher) on the Azure OpenAI resource. Without that role you will see `401`/`403` errors at the first request.
 
-> `apiBase` remains mandatory in both modes — it's your Azure resource endpoint and cannot be inferred. If neither `apiKey` is set nor `azure-identity` is installed, the provider raises a clear error pointing you at `python -m pip install 'nanobot-ai[azure]'`.
+> `apiBase` remains mandatory in both modes — it's your Azure resource endpoint and cannot be inferred. If neither `apiKey` is set nor `azure-identity` is installed, the provider raises a clear error pointing you at `python -m pip install 'openbot-ai[azure]'`.
 
 </details>
 
@@ -415,7 +415,7 @@ Use the normal AWS credential chain (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KE
 }
 ```
 
-You can also set `providers.bedrock.apiKey` to a Bedrock API key; nanobot exports it as `AWS_BEARER_TOKEN_BEDROCK` for the AWS SDK.
+You can also set `providers.bedrock.apiKey` to a Bedrock API key; openbot exports it as `AWS_BEARER_TOKEN_BEDROCK` for the AWS SDK.
 
 Credential options:
 
@@ -526,13 +526,13 @@ With a named AWS profile:
 
 For regional routing, use one of Bedrock's inference IDs, for example `bedrock/us.anthropic.claude-opus-4-7`, `bedrock/eu.anthropic.claude-opus-4-7`, or `bedrock/jp.anthropic.claude-opus-4-7`.
 
-Claude Opus 4.7 does not accept `temperature`, `top_p`, or `top_k`; nanobot omits `temperature` automatically for this model. If `reasoningEffort` is set to `low`, `medium`, `high`, `max`, or `adaptive`, nanobot sends Bedrock's adaptive thinking parameter.
+Claude Opus 4.7 does not accept `temperature`, `top_p`, or `top_k`; openbot omits `temperature` automatically for this model. If `reasoningEffort` is set to `low`, `medium`, `high`, `max`, or `adaptive`, openbot sends Bedrock's adaptive thinking parameter.
 
 Anthropic models on Bedrock can also require Anthropic use-case registration and are subject to Anthropic-supported country/region restrictions. If Claude fails with a `ValidationException` about unsupported countries or regions, try a non-Anthropic Bedrock model such as Amazon Nova to verify the provider setup.
 
 **4. Model IDs**
 
-Use Bedrock model IDs or inference profile IDs with a `bedrock/` prefix in nanobot config. nanobot removes the prefix before calling AWS.
+Use Bedrock model IDs or inference profile IDs with a `bedrock/` prefix in openbot config. openbot removes the prefix before calling AWS.
 
 Examples:
 
@@ -548,7 +548,7 @@ Check the Bedrock console for the exact model ID and region availability. Some m
 
 **5. Advanced model fields**
 
-Model-specific fields can be supplied with `extraBody`; nanobot merges it into Converse `additionalModelRequestFields`:
+Model-specific fields can be supplied with `extraBody`; openbot merges it into Converse `additionalModelRequestFields`:
 
 ```json
 {
@@ -569,7 +569,7 @@ Model-specific fields can be supplied with `extraBody`; nanobot merges it into C
 
 Use `apiBase` only for a custom Bedrock Runtime endpoint URL, such as a VPC endpoint or proxy. It is not needed for normal AWS regions.
 
-Current scope: nanobot passes `messages`, `system`, `inferenceConfig`, `toolConfig`, and `additionalModelRequestFields`. Bedrock Prompt Management, Guardrails, `serviceTier`, and other top-level Converse options are not first-class config fields yet.
+Current scope: openbot passes `messages`, `system`, `inferenceConfig`, `toolConfig`, and `additionalModelRequestFields`. Bedrock Prompt Management, Guardrails, `serviceTier`, and other top-level Converse options are not first-class config fields yet.
 
 **6. Quick checks**
 
@@ -585,7 +585,7 @@ export AWS_REGION="us-east-1"
 Then run:
 
 ```bash
-nanobot agent -m "Reply with one short sentence."
+openbot agent -m "Reply with one short sentence."
 ```
 
 </details>
@@ -594,14 +594,14 @@ nanobot agent -m "Reply with one short sentence."
 <details>
 <summary><b>OpenAI Codex (OAuth)</b></summary>
 
-Codex uses OAuth instead of API keys. Requires a ChatGPT Plus or Pro account. No `providers.openaiCodex` block is needed in `config.json`; `nanobot provider login` stores the OAuth session outside config.
+Codex uses OAuth instead of API keys. Requires a ChatGPT Plus or Pro account. No `providers.openaiCodex` block is needed in `config.json`; `openbot provider login` stores the OAuth session outside config.
 
 **1. Login:**
 ```bash
-nanobot provider login openai-codex
+openbot provider login openai-codex
 ```
 
-**2. Set model** (merge into `~/.nanobot/config.json`):
+**2. Set model** (merge into `~/.openbot/config.json`):
 ```json
 {
   "modelPresets": {
@@ -620,13 +620,13 @@ nanobot provider login openai-codex
 
 **3. Chat:**
 ```bash
-nanobot agent -m "Hello!"
+openbot agent -m "Hello!"
 
 # Target a specific workspace/config locally
-nanobot agent -c ~/.nanobot-telegram/config.json -m "Hello!"
+openbot agent -c ~/.openbot-telegram/config.json -m "Hello!"
 
 # One-off workspace override on top of that config
-nanobot agent -c ~/.nanobot-telegram/config.json -w /tmp/nanobot-telegram-test -m "Hello!"
+openbot agent -c ~/.openbot-telegram/config.json -w /tmp/openbot-telegram-test -m "Hello!"
 ```
 
 > Docker users: use `docker run -it` for interactive OAuth login.
@@ -637,14 +637,14 @@ nanobot agent -c ~/.nanobot-telegram/config.json -w /tmp/nanobot-telegram-test -
 <details>
 <summary><b>GitHub Copilot (OAuth)</b></summary>
 
-GitHub Copilot uses OAuth instead of API keys. Requires a [GitHub account with a plan](https://github.com/features/copilot/plans) configured. No `providers.githubCopilot` block is needed in `config.json`; `nanobot provider login` stores the OAuth session outside config.
+GitHub Copilot uses OAuth instead of API keys. Requires a [GitHub account with a plan](https://github.com/features/copilot/plans) configured. No `providers.githubCopilot` block is needed in `config.json`; `openbot provider login` stores the OAuth session outside config.
 
 **1. Login:**
 ```bash
-nanobot provider login github-copilot
+openbot provider login github-copilot
 ```
 
-**2. Set model** (merge into `~/.nanobot/config.json`):
+**2. Set model** (merge into `~/.openbot/config.json`):
 ```json
 {
   "modelPresets": {
@@ -663,13 +663,13 @@ nanobot provider login github-copilot
 
 **3. Chat:**
 ```bash
-nanobot agent -m "Hello!"
+openbot agent -m "Hello!"
 
 # Target a specific workspace/config locally
-nanobot agent -c ~/.nanobot-telegram/config.json -m "Hello!"
+openbot agent -c ~/.openbot-telegram/config.json -m "Hello!"
 
 # One-off workspace override on top of that config
-nanobot agent -c ~/.nanobot-telegram/config.json -w /tmp/nanobot-telegram-test -m "Hello!"
+openbot agent -c ~/.openbot-telegram/config.json -w /tmp/openbot-telegram-test -m "Hello!"
 ```
 
 > Docker users: use `docker run -it` for interactive OAuth login.
@@ -679,7 +679,7 @@ nanobot agent -c ~/.nanobot-telegram/config.json -w /tmp/nanobot-telegram-test -
 <details>
 <summary><b>LongCat (OpenAI-compatible)</b></summary>
 
-LongCat is available through nanobot's built-in OpenAI-compatible provider flow. The default API base already points to `https://api.longcat.chat/openai/v1`, so you usually only need to set `apiKey`.
+LongCat is available through openbot's built-in OpenAI-compatible provider flow. The default API base already points to `https://api.longcat.chat/openai/v1`, so you usually only need to set `apiKey`.
 
 ```json
 {
@@ -775,7 +775,7 @@ Supported models include `step-3.5-flash`, `step-3.5-flash-2603`, and `step-rout
 <details>
 <summary><b>Ant Ling (OpenAI-compatible)</b></summary>
 
-Ant Ling is available through nanobot's built-in OpenAI-compatible provider flow. The default API base points to `https://api.ant-ling.com/v1`, so you usually only need to set `apiKey`.
+Ant Ling is available through openbot's built-in OpenAI-compatible provider flow. The default API base points to `https://api.ant-ling.com/v1`, so you usually only need to set `apiKey`.
 
 ```json
 {
@@ -860,7 +860,7 @@ Connects directly to any OpenAI-compatible endpoint — llama.cpp, Together AI, 
 >
 > In short: **chat-completions-compatible endpoint → `custom`**; **Responses-compatible endpoint → `azure_openai`**.
 
-Some OpenAI-compatible gateways expose request-body extensions such as vLLM guided decoding or local sampling controls. Put those under `extraBody`; nanobot merges them into the chat-completions request body after its provider defaults:
+Some OpenAI-compatible gateways expose request-body extensions such as vLLM guided decoding or local sampling controls. Put those under `extraBody`; openbot merges them into the chat-completions request body after its provider defaults:
 
 ```json
 {
@@ -893,7 +893,7 @@ Run a local model with Ollama, then add to config:
 ollama run llama3.2
 ```
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.openbot/config.json`):
 ```json
 {
   "providers": {
@@ -930,7 +930,7 @@ ollama run llama3.2
 - Load a model (e.g., Llama, Mistral, Qwen)
 - Click "Start Server" (default port: 1234)
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.openbot/config.json`):
 ```json
 {
   "providers": {
@@ -961,7 +961,7 @@ ollama run llama3.2
 <details>
 <summary><b>Atomic Chat (local)</b></summary>
 
-[Atomic Chat](https://atomic.chat/) is a local-first desktop app that exposes an **OpenAI-compatible** HTTP API (default `http://localhost:1337/v1`). This setup applies when you want to run nanobot against a model on your own machine instead of a hosted API provider.
+[Atomic Chat](https://atomic.chat/) is a local-first desktop app that exposes an **OpenAI-compatible** HTTP API (default `http://localhost:1337/v1`). This setup applies when you want to run openbot against a model on your own machine instead of a hosted API provider.
 
 **1. Start Atomic Chat**
 
@@ -969,7 +969,7 @@ ollama run llama3.2
 - Open Atomic Chat, download a model, and keep the app running. The local API is enabled by default.
 - Copy the model ID exposed by the local API. For example, the model ID for `Qwen 3 32B` might be `qwen3-32b`.
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.openbot/config.json`):
 
 ```json
 {
@@ -1052,7 +1052,7 @@ docker run -d \
   --target_device GPU
 ```
 
-**3. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**3. Add to config** (partial — merge into `~/.openbot/config.json`):
 
 ```json
 {
@@ -1089,7 +1089,7 @@ Run your own model with vLLM or any OpenAI-compatible server, then add to config
 vllm serve meta-llama/Llama-3.1-8B-Instruct --port 8000
 ```
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.openbot/config.json`):
 
 *Provider (set API key to null for local servers):*
 ```json
@@ -1236,7 +1236,7 @@ Preset fallback chain:
 }
 ```
 
-String entries are preset names, not raw model names. In the example above, `"deep"` means `modelPresets.deep`; nanobot will not interpret it as a provider model ID. Changing a preset updates both `/model <preset>` switching and any fallback chain that references it.
+String entries are preset names, not raw model names. In the example above, `"deep"` means `modelPresets.deep`; openbot will not interpret it as a provider model ID. Changing a preset updates both `/model <preset>` switching and any fallback chain that references it.
 
 Inline fallback object:
 
@@ -1268,9 +1268,9 @@ Inline fallback object:
 
 Use inline objects only when a fallback is not worth naming as a reusable preset. `fallbackModels` belongs under `agents.defaults`, not inside individual `modelPresets` entries.
 
-Failover normally runs when the primary provider returns a retryable model/provider error before any answer text has been streamed. Stream-stall timeouts are the recovery exception: if the provider already emitted partial answer text and then stalls, nanobot closes the current stream segment and retries/fails over in a new segment. Typical fallback cases include timeouts, connection errors, 5xx server errors, 429 rate limits, overloads, and quota/balance exhaustion. It does not run for malformed requests, authentication/permission errors, content filtering/refusals, or context-length/message-format errors.
+Failover normally runs when the primary provider returns a retryable model/provider error before any answer text has been streamed. Stream-stall timeouts are the recovery exception: if the provider already emitted partial answer text and then stalls, openbot closes the current stream segment and retries/fails over in a new segment. Typical fallback cases include timeouts, connection errors, 5xx server errors, 429 rate limits, overloads, and quota/balance exhaustion. It does not run for malformed requests, authentication/permission errors, content filtering/refusals, or context-length/message-format errors.
 
-If fallback candidates use smaller `contextWindowTokens` values, nanobot builds context using the smallest window in the active chain so every candidate can receive the same prompt.
+If fallback candidates use smaller `contextWindowTokens` values, openbot builds context using the smallest window in the active chain so every candidate can receive the same prompt.
 
 ## Transcription Settings
 
@@ -1331,7 +1331,7 @@ If you are adding a new transcription provider, see [`development.md`](./develop
 
 ## Channel Settings
 
-Global settings that apply to all channels. Configure under the `channels` section in `~/.nanobot/config.json`:
+Global settings that apply to all channels. Configure under the `channels` section in `~/.openbot/config.json`:
 
 ```json
 {
@@ -1380,7 +1380,7 @@ Global settings that apply to all channels. Configure under the `channels` secti
 
 Retry is intentionally simple.
 
-When a channel `send()` raises, nanobot retries at the channel-manager layer. By default, `channels.sendMaxRetries` is `3`, and that count includes the initial send.
+When a channel `send()` raises, openbot retries at the channel-manager layer. By default, `channels.sendMaxRetries` is `3`, and that count includes the initial send.
 
 - **Attempt 1**: Send immediately
 - **Attempt 2**: Retry after `1s`
@@ -1394,11 +1394,11 @@ When a channel `send()` raises, nanobot retries at the channel-manager layer. By
 >
 > Some channels may still apply small API-specific retries internally. For example, Telegram separately retries timeout and flood-control errors before surfacing a final failure to the manager.
 >
-> If a channel is completely unreachable, nanobot cannot notify the user through that same channel. Watch logs for `Failed to send to {channel} after N attempts` to spot persistent delivery failures.
+> If a channel is completely unreachable, openbot cannot notify the user through that same channel. Watch logs for `Failed to send to {channel} after N attempts` to spot persistent delivery failures.
 
 ## Web Tools
 
-nanobot incorporates basic tools for accessing the web. These include searching via APIs, and fetching arbitrary web pages in Markdown format. They are enabled by default, and can be configured in `~/.nanobot/config.json` under `tools.web`.
+openbot incorporates basic tools for accessing the web. These include searching via APIs, and fetching arbitrary web pages in Markdown format. They are enabled by default, and can be configured in `~/.openbot/config.json` under `tools.web`.
 
 If you want to disable them, which removes both `web_search` and `web_fetch` from the tool list sent to the LLM, set `tools.web.enable` to `false`:
 
@@ -1412,7 +1412,7 @@ If you want to disable them, which removes both `web_search` and `web_fetch` fro
 }
 ```
 
-nanobot uses a shared SSRF guard for built-in web fetches and HTTP/SSE MCP connections. By default it blocks loopback, RFC1918/private ranges, CGNAT/Tailscale ranges, link-local addresses, and cloud metadata endpoints. If you need to allow trusted private ranges, explicitly exempt them from SSRF blocking with `tools.ssrfWhitelist`:
+openbot uses a shared SSRF guard for built-in web fetches and HTTP/SSE MCP connections. By default it blocks loopback, RFC1918/private ranges, CGNAT/Tailscale ranges, link-local addresses, and cloud metadata endpoints. If you need to allow trusted private ranges, explicitly exempt them from SSRF blocking with `tools.ssrfWhitelist`:
 
 ```json
 {
@@ -1440,7 +1440,7 @@ Keep whitelist entries as narrow as possible, such as a single host CIDR (`192.1
 
 ### Web Search
 
-nanobot supports multiple web search providers. Configure in `~/.nanobot/config.json` under `tools.web.search`.
+openbot supports multiple web search providers. Configure in `~/.openbot/config.json` under `tools.web.search`.
 
 By default, web search uses `duckduckgo`, and it works out of the box without an API key.
 
@@ -1606,7 +1606,7 @@ You can also set `WEB_SEARCH_API_KEY` for compatibility with the Volcengine web-
 > { "tools": { "web": { "userAgent": "Not-A-Browser", "fetch": { "useJinaReader": false } } } }
 > ```
 
-nanobot by default uses [Jina Reader](https://jina.ai/reader/), a third-party API, to convert arbitrary pages into Markdown format for easy digestion by the LLM, with a local fallback based on [readability-lxml](https://github.com/buriy/python-readability) if the former fails.
+openbot by default uses [Jina Reader](https://jina.ai/reader/), a third-party API, to convert arbitrary pages into Markdown format for easy digestion by the LLM, with a local fallback based on [readability-lxml](https://github.com/buriy/python-readability) if the former fails.
 
 If you want to always use the local conversion, you can force it using:
 
@@ -1639,7 +1639,7 @@ See [Image Generation](./image-generation.md) for WebUI usage, provider examples
 > [!TIP]
 > The config format is compatible with Claude Desktop / Cursor. You can copy MCP server configs directly from any MCP server's README.
 
-nanobot supports [MCP](https://modelcontextprotocol.io/) — connect external tool servers and use them as native agent tools.
+openbot supports [MCP](https://modelcontextprotocol.io/) — connect external tool servers and use them as native agent tools.
 
 Add MCP servers to your `config.json`:
 
@@ -1703,7 +1703,7 @@ Use `enabledTools` to register only a subset of tools from an MCP server:
 }
 ```
 
-`enabledTools` accepts either the raw MCP tool name (for example `read_file`) or the wrapped nanobot tool name (for example `mcp_filesystem_write_file`).
+`enabledTools` accepts either the raw MCP tool name (for example `read_file`) or the wrapped openbot tool name (for example `mcp_filesystem_write_file`).
 
 - Omit `enabledTools`, or set it to `["*"]`, to register all tools.
 - Set `enabledTools` to `[]` to register no tools from that server.
@@ -1732,7 +1732,7 @@ For API keys, tokens, and other secrets, see [Environment Variables for Secrets]
 | `tools.ssrfWhitelist` | `[]` | CIDR ranges exempted from the shared SSRF guard used by web fetches and HTTP/SSE MCP connections. Prefer exact host CIDRs such as `192.168.1.50/32`; broad ranges increase SSRF exposure. |
 | `channels.*.allowFrom` | omitted | Access control per channel. Omit to use pairing-only mode; set `["*"]` to allow everyone; or list specific user IDs. See [Pairing](#pairing) for details. |
 
-**Docker security**: The official Docker image runs as a non-root user (`nanobot`, UID 1000) with bubblewrap pre-installed. When using `docker-compose.yml`, the container drops all Linux capabilities except `SYS_ADMIN` (required for bwrap's namespace isolation).
+**Docker security**: The official Docker image runs as a non-root user (`openbot`, UID 1000) with bubblewrap pre-installed. When using `docker-compose.yml`, the container drops all Linux capabilities except `SYS_ADMIN` (required for bwrap's namespace isolation).
 
 
 ## Pairing
@@ -1795,14 +1795,14 @@ You can find user IDs in the output of `/pairing list`.
 From the terminal:
 
 ```bash
-nanobot agent -m "/pairing list"
-nanobot agent -m "/pairing approve ABCD-EFGH"
+openbot agent -m "/pairing list"
+openbot agent -m "/pairing approve ABCD-EFGH"
 ```
 
 
 ## Gateway Heartbeat
 
-The gateway can run a protected heartbeat cron job that periodically checks `HEARTBEAT.md` in the active workspace. This is enabled by default when you run `nanobot gateway`.
+The gateway can run a protected heartbeat cron job that periodically checks `HEARTBEAT.md` in the active workspace. This is enabled by default when you run `openbot gateway`.
 
 ```json
 {
@@ -1829,7 +1829,7 @@ The heartbeat job is backed by the same cron service as user-created reminders. 
 
 ## Subagent Concurrency
 
-By default, nanobot only allows one spawned subagent at a time. When the limit is reached, the `spawn` tool returns an error so the agent can decide to wait or rearrange its work. This protects local LLM servers from loading multiple KV caches at once. If your provider can handle more parallel work, raise the limit:
+By default, openbot only allows one spawned subagent at a time. When the limit is reached, the `spawn` tool returns an error so the agent can decide to wait or rearrange its work. This protects local LLM servers from loading multiple KV caches at once. If your provider can handle more parallel work, raise the limit:
 
 ```json
 {
@@ -1848,7 +1848,7 @@ By default, nanobot only allows one spawned subagent at a time. When the limit i
 
 ## Auto Compact
 
-When a user is idle for longer than a configured threshold, nanobot **proactively** compresses the older part of the session context into a summary while keeping a recent legal suffix of live messages. This reduces token cost and first-token latency when the user returns — instead of re-processing a long stale context with an expired KV cache, the model receives a compact summary, the most recent live context, and fresh input.
+When a user is idle for longer than a configured threshold, openbot **proactively** compresses the older part of the session context into a summary while keeping a recent legal suffix of live messages. This reduces token cost and first-token latency when the user returns — instead of re-processing a long stale context with an expired KV cache, the model receives a compact summary, the most recent live context, and fresh input.
 
 ```json
 {
@@ -1883,7 +1883,7 @@ How it works:
 
 Time is context. Context should be precise.
 
-By default, nanobot uses `UTC` for runtime time context. If you want the agent to think in your local time, set `agents.defaults.timezone` to a valid [IANA timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones):
+By default, openbot uses `UTC` for runtime time context. If you want the agent to think in your local time, set `agents.defaults.timezone` to a valid [IANA timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones):
 
 ```json
 {
@@ -1903,7 +1903,7 @@ Common examples: `UTC`, `America/New_York`, `America/Los_Angeles`, `Europe/Londo
 
 ## Unified Session
 
-By default, each channel × chat ID combination gets its own session. If you use nanobot across multiple channels (e.g. Telegram + Discord + CLI) and want them to share the same conversation, enable `unifiedSession`:
+By default, each channel × chat ID combination gets its own session. If you use openbot across multiple channels (e.g. Telegram + Discord + CLI) and want them to share the same conversation, enable `unifiedSession`:
 
 ```json
 {
@@ -1929,7 +1929,7 @@ When enabled, all incoming messages — regardless of which channel they arrive 
 
 ## Disabled Skills
 
-nanobot ships with built-in skills, and your workspace can also define custom skills under `skills/`. If you want to hide specific skills from the agent, set `agents.defaults.disabledSkills` to a list of skill directory names:
+openbot ships with built-in skills, and your workspace can also define custom skills under `skills/`. If you want to hide specific skills from the agent, set `agents.defaults.disabledSkills` to a list of skill directory names:
 
 ```json
 {

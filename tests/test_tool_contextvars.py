@@ -4,11 +4,11 @@ import asyncio
 
 import pytest
 
-from nanobot.agent.tools.context import RequestContext
-from nanobot.agent.tools.cron import CronTool
-from nanobot.agent.tools.message import MessageTool
-from nanobot.agent.tools.spawn import SpawnTool
-from nanobot.cron.service import CronService
+from openbot.agent.tools.context import RequestContext
+from openbot.agent.tools.cron import CronTool
+from openbot.agent.tools.message import MessageTool
+from openbot.agent.tools.spawn import SpawnTool
+from openbot.cron.service import CronService
 
 
 @pytest.mark.asyncio

@@ -7,8 +7,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$Package = "nanobot-ai"
-$MainSource = "https://github.com/HKUDS/nanobot/archive/refs/heads/main.zip"
+$Package = "openbot-ai"
+$MainSource = "https://github.com/HKUDS/openbot/archive/refs/heads/main.zip"
 $InstallTarget = $Package
 $InstallSource = "PyPI"
 
@@ -23,19 +23,19 @@ function Fail {
 }
 
 function Show-InstallFailureHint {
-    [Console]::Error.WriteLine("Error: pip could not install nanobot from $InstallSource.")
+    [Console]::Error.WriteLine("Error: pip could not install openbot from $InstallSource.")
     [Console]::Error.WriteLine("If pip mentioned externally-managed-environment, install in a virtual environment or use uv/pipx.")
     [Console]::Error.WriteLine("You can also run manually:")
     [Console]::Error.WriteLine("  $Python -m pip install --upgrade $InstallTarget")
     [Console]::Error.WriteLine("Then start setup with:")
-    [Console]::Error.WriteLine("  $Python -m nanobot onboard --wizard")
-    throw "pip could not install nanobot from $InstallSource"
+    [Console]::Error.WriteLine("  $Python -m openbot onboard --wizard")
+    throw "pip could not install openbot from $InstallSource"
 }
 
 function Show-Usage {
     Write-Host "Usage: install.ps1 [-Dev|--dev] [-DryRun|--dry-run]"
     Write-Host ""
-    Write-Host "By default this installs or upgrades nanobot-ai from PyPI."
+    Write-Host "By default this installs or upgrades openbot-ai from PyPI."
     Write-Host "Use --dev to install from the current main branch on GitHub."
     Write-Host "Use --dry-run to print what would happen without installing or starting the wizard."
 }
@@ -120,19 +120,19 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($DryRun) {
-    Write-Info "Dry run: would install or upgrade nanobot from $InstallSource."
+    Write-Info "Dry run: would install or upgrade openbot from $InstallSource."
     Write-Info "Dry run: would run: $Python -m pip install --upgrade $InstallTarget"
     Write-Info "Dry run: if that fails because system site-packages are not writable, would retry: $Python -m pip install --user --upgrade $InstallTarget"
-    if ($env:NANOBOT_SKIP_WIZARD -eq "1") {
-        Write-Info "Dry run: would skip setup wizard because NANOBOT_SKIP_WIZARD=1."
+    if ($env:openbot_SKIP_WIZARD -eq "1") {
+        Write-Info "Dry run: would skip setup wizard because openbot_SKIP_WIZARD=1."
     } else {
-        Write-Info "Dry run: would run: $Python -m nanobot onboard --wizard"
+        Write-Info "Dry run: would run: $Python -m openbot onboard --wizard"
     }
     Write-Info "Dry run: no changes made."
     return
 }
 
-Write-Info "Installing or upgrading nanobot from $InstallSource..."
+Write-Info "Installing or upgrading openbot from $InstallSource..."
 & $Python -m pip install --upgrade $InstallTarget
 if ($LASTEXITCODE -ne 0) {
     Write-Info "Install failed. Retrying as a user install..."
@@ -142,22 +142,22 @@ if ($LASTEXITCODE -ne 0) {
     }
 }
 
-Write-Info "Installed nanobot:"
-& $Python -m nanobot --version
+Write-Info "Installed openbot:"
+& $Python -m openbot --version
 if ($LASTEXITCODE -ne 0) {
-    Fail "nanobot was installed, but the command could not be started."
+    Fail "openbot was installed, but the command could not be started."
 }
 
-if ($env:NANOBOT_SKIP_WIZARD -eq "1") {
-    Write-Info "Skipping setup wizard because NANOBOT_SKIP_WIZARD=1."
-    Write-Info "Run this later: $Python -m nanobot onboard --wizard"
+if ($env:openbot_SKIP_WIZARD -eq "1") {
+    Write-Info "Skipping setup wizard because openbot_SKIP_WIZARD=1."
+    Write-Info "Run this later: $Python -m openbot onboard --wizard"
     return
 }
 
 Write-Info "Starting setup wizard..."
-& $Python -m nanobot onboard --wizard
+& $Python -m openbot onboard --wizard
 if ($LASTEXITCODE -ne 0) {
     Fail "Setup wizard did not complete."
 }
 
-Write-Info "Done. Try: $Python -m nanobot agent -m `"Hello!`""
+Write-Info "Done. Try: $Python -m openbot agent -m `"Hello!`""

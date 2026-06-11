@@ -25,7 +25,7 @@ These commands work inside chat channels and interactive agent sessions:
 
 ## Pairing
 
-When someone sends a DM to the bot and isn't on the allowlist — whether it's a new user or an existing user on a new channel — nanobot automatically replies with a **pairing code** (like `ABCD-EFGH`) that expires in 10 minutes. To grant them access:
+When someone sends a DM to the bot and isn't on the allowlist — whether it's a new user or an existing user on a new channel — openbot automatically replies with a **pairing code** (like `ABCD-EFGH`) that expires in 10 minutes. To grant them access:
 
 ```text
 /pairing approve ABCD-EFGH
@@ -57,9 +57,9 @@ Preset names come from the top-level `modelPresets` config. Switching is runtime
 
 ## Periodic Tasks
 
-Periodic tasks are driven by `HEARTBEAT.md` in your workspace (`~/.nanobot/workspace/HEARTBEAT.md`). When `nanobot gateway` starts, it registers a protected heartbeat cron job by default. Every 30 minutes, that job checks the file; if it finds tasks under `## Active Tasks`, the agent executes them and delivers results to your most recently active chat channel. If there are no active tasks, the heartbeat is skipped silently.
+Periodic tasks are driven by `HEARTBEAT.md` in your workspace (`~/.openbot/workspace/HEARTBEAT.md`). When `openbot gateway` starts, it registers a protected heartbeat cron job by default. Every 30 minutes, that job checks the file; if it finds tasks under `## Active Tasks`, the agent executes them and delivers results to your most recently active chat channel. If there are no active tasks, the heartbeat is skipped silently.
 
-**Setup:** edit `~/.nanobot/workspace/HEARTBEAT.md` (created automatically by `nanobot onboard`):
+**Setup:** edit `~/.openbot/workspace/HEARTBEAT.md` (created automatically by `openbot onboard`):
 
 ```markdown
 ## Active Tasks
@@ -70,7 +70,7 @@ Periodic tasks are driven by `HEARTBEAT.md` in your workspace (`~/.nanobot/works
 
 The agent can also manage this file itself — ask it to "add a periodic task" and it will update `HEARTBEAT.md` for you. Completed tasks should be deleted from the file, not moved to another section.
 
-You can change the interval or disable the built-in heartbeat in `~/.nanobot/config.json`:
+You can change the interval or disable the built-in heartbeat in `~/.openbot/config.json`:
 
 ```json
 {
@@ -85,4 +85,4 @@ You can change the interval or disable the built-in heartbeat in `~/.nanobot/con
 
 The heartbeat job is visible in `cron(action="list")` as `heartbeat`, but it is system-managed and cannot be removed with the `cron` tool. To stop it, set `gateway.heartbeat.enabled` to `false` and restart the gateway.
 
-> **Note:** The gateway must be running (`nanobot gateway`) and you must have chatted with the bot at least once so it knows which channel to deliver to.
+> **Note:** The gateway must be running (`openbot gateway`) and you must have chatted with the bot at least once so it knows which channel to deliver to.

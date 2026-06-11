@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import nanobot.webui.session_list_index as session_list_index
-from nanobot.session.manager import SessionManager
+import openbot.webui.session_list_index as session_list_index
+from openbot.session.manager import SessionManager
 
 
 def test_webui_session_list_reuses_valid_index_without_scanning_files(

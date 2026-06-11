@@ -8,8 +8,8 @@ from types import ModuleType, SimpleNamespace
 import httpx
 import pytest
 
-import nanobot.agent.tools.mcp as mcp_mod
-from nanobot.agent.tools.mcp import (
+import openbot.agent.tools.mcp as mcp_mod
+from openbot.agent.tools.mcp import (
     MCPPromptWrapper,
     MCPResourceWrapper,
     MCPToolWrapper,
@@ -17,8 +17,8 @@ from nanobot.agent.tools.mcp import (
     _sanitize_name,
     connect_mcp_servers,
 )
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.config.schema import MCPServerConfig
+from openbot.agent.tools.registry import ToolRegistry
+from openbot.config.schema import MCPServerConfig
 
 
 class _FakeTextContent:
@@ -444,7 +444,7 @@ async def test_connect_mcp_servers_enabled_tools_warns_on_unknown_entries(
     def _warning(message: str, *args: object) -> None:
         warnings.append(message.format(*args))
 
-    monkeypatch.setattr("nanobot.agent.tools.mcp.logger.warning", _warning)
+    monkeypatch.setattr("openbot.agent.tools.mcp.logger.warning", _warning)
 
     stacks = await connect_mcp_servers(
         {"test": MCPServerConfig(command="fake", enabled_tools=["unknown"])},
@@ -475,7 +475,7 @@ async def test_connect_mcp_servers_logs_stdio_pollution_hint(
         yield  # pragma: no cover
 
     monkeypatch.setattr(sys.modules["mcp.client.stdio"], "stdio_client", _broken_stdio_client)
-    monkeypatch.setattr("nanobot.agent.tools.mcp.logger.exception", _error)
+    monkeypatch.setattr("openbot.agent.tools.mcp.logger.exception", _error)
 
     registry = ToolRegistry()
     stacks = await connect_mcp_servers({"gh": MCPServerConfig(command="github-mcp")}, registry)
@@ -510,7 +510,7 @@ async def test_connect_mcp_servers_rejects_unsafe_http_urls_before_probe(
         warnings.append(message.format(*args))
 
     monkeypatch.setattr(mcp_mod.asyncio, "open_connection", _open_connection)
-    monkeypatch.setattr("nanobot.agent.tools.mcp.logger.warning", _warning)
+    monkeypatch.setattr("openbot.agent.tools.mcp.logger.warning", _warning)
 
     registry = ToolRegistry()
     stacks = await connect_mcp_servers({"local": config}, registry)
@@ -704,13 +704,13 @@ async def test_connect_mcp_servers_passes_stdio_cwd(
 
     registry = ToolRegistry()
     stacks = await connect_mcp_servers(
-        {"test": MCPServerConfig(command="fake", cwd="/tmp/nanobot-mcp-test")},
+        {"test": MCPServerConfig(command="fake", cwd="/tmp/openbot-mcp-test")},
         registry,
     )
     for stack in stacks.values():
         await stack.aclose()
 
-    assert captured["cwd"] == "/tmp/nanobot-mcp-test"
+    assert captured["cwd"] == "/tmp/openbot-mcp-test"
 
 
 # ---------------------------------------------------------------------------

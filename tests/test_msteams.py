@@ -5,20 +5,20 @@ import pytest
 
 # Check optional msteams dependencies before running tests
 try:
-    from nanobot.channels import msteams
+    from openbot.channels import msteams
     MSTEAMS_AVAILABLE = getattr(msteams, "MSTEAMS_AVAILABLE", False)
 except ImportError:
     MSTEAMS_AVAILABLE = False
 
 if not MSTEAMS_AVAILABLE:
-    pytest.skip("MSTeams dependencies not installed (PyJWT, cryptography). Run: pip install nanobot-ai[msteams]", allow_module_level=True)
+    pytest.skip("MSTeams dependencies not installed (PyJWT, cryptography). Run: pip install openbot-ai[msteams]", allow_module_level=True)
 
 import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-import nanobot.channels.msteams as msteams_module
-from nanobot.bus.events import OutboundMessage
-from nanobot.channels.msteams import ConversationRef, MSTeamsChannel
+import openbot.channels.msteams as msteams_module
+from openbot.bus.events import OutboundMessage
+from openbot.channels.msteams import ConversationRef, MSTeamsChannel
 
 
 class DummyBus:
@@ -59,7 +59,7 @@ class FakeHttpClient:
 
 @pytest.fixture
 def make_channel(tmp_path, monkeypatch):
-    monkeypatch.setattr("nanobot.channels.msteams.get_workspace_path", lambda: tmp_path)
+    monkeypatch.setattr("openbot.channels.msteams.get_workspace_path", lambda: tmp_path)
 
     def _make_channel(**config_overrides):
         config = {
@@ -95,7 +95,7 @@ async def test_handle_activity_personal_message_publishes_and_stores_ref(make_ch
         },
         "recipient": {
             "id": "28:bot-id",
-            "name": "nanobot",
+            "name": "openbot",
         },
         "channelData": {
             "tenant": {"id": "tenant-id"},
@@ -402,7 +402,7 @@ async def test_handle_activity_ignores_group_messages(make_channel):
         },
         "recipient": {
             "id": "28:bot-id",
-            "name": "nanobot",
+            "name": "openbot",
         },
     }
 
@@ -432,7 +432,7 @@ async def test_handle_activity_denied_sender_does_not_store_ref(make_channel, tm
         },
         "recipient": {
             "id": "28:bot-id",
-            "name": "nanobot",
+            "name": "openbot",
         },
         "channelData": {
             "tenant": {"id": "tenant-id"},
@@ -467,7 +467,7 @@ async def test_handle_activity_rejects_untrusted_service_url(make_channel, tmp_p
         },
         "recipient": {
             "id": "28:bot-id",
-            "name": "nanobot",
+            "name": "openbot",
         },
     }
 
@@ -485,7 +485,7 @@ async def test_handle_activity_mention_only_uses_default_response(make_channel):
     activity = {
         "type": "message",
         "id": "activity-3",
-        "text": "<at>Nanobot</at>",
+        "text": "<at>openbot</at>",
         "serviceUrl": "https://smba.trafficmanager.net/amer/",
         "conversation": {
             "id": "conv-empty",
@@ -498,7 +498,7 @@ async def test_handle_activity_mention_only_uses_default_response(make_channel):
         },
         "recipient": {
             "id": "28:bot-id",
-            "name": "nanobot",
+            "name": "openbot",
         },
     }
 
@@ -516,7 +516,7 @@ async def test_handle_activity_mention_only_ignores_when_response_disabled(make_
     activity = {
         "type": "message",
         "id": "activity-4",
-        "text": "<at>Nanobot</at>",
+        "text": "<at>openbot</at>",
         "serviceUrl": "https://smba.trafficmanager.net/amer/",
         "conversation": {
             "id": "conv-empty-disabled",
@@ -529,7 +529,7 @@ async def test_handle_activity_mention_only_ignores_when_response_disabled(make_
         },
         "recipient": {
             "id": "28:bot-id",
-            "name": "nanobot",
+            "name": "openbot",
         },
     }
 
@@ -542,7 +542,7 @@ async def test_handle_activity_mention_only_ignores_when_response_disabled(make_
 def test_strip_possible_bot_mention_removes_generic_at_tags(make_channel):
     ch = make_channel()
 
-    assert ch._strip_possible_bot_mention("<at>Nanobot</at> hello") == "hello"
+    assert ch._strip_possible_bot_mention("<at>openbot</at> hello") == "hello"
     assert ch._strip_possible_bot_mention("hi <at>Some Bot</at> there") == "hi there"
 
 
@@ -550,7 +550,7 @@ def test_sanitize_inbound_text_keeps_normal_inline_message(make_channel):
     ch = make_channel()
 
     activity = {
-        "text": "<at>Nanobot</at> normal inline message",
+        "text": "<at>openbot</at> normal inline message",
         "channelData": {},
     }
 
@@ -903,7 +903,7 @@ async def test_start_logs_install_hint_when_pyjwt_missing(make_channel, monkeypa
 
     await ch.start()
 
-    assert errors == ["PyJWT not installed. Run: pip install nanobot-ai[msteams]"]
+    assert errors == ["PyJWT not installed. Run: pip install openbot-ai[msteams]"]
 
 
 def test_save_refs_prunes_webchat_and_stale_refs(make_channel):

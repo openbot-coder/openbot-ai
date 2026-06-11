@@ -1,4 +1,4 @@
-from nanobot.utils.helpers import split_message
+from openbot.utils.helpers import split_message
 
 
 def test_split_message_no_code_blocks_unchanged():

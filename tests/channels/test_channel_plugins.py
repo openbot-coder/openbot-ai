@@ -8,15 +8,15 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from nanobot.bus.events import OutboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.channels.base import BaseChannel
-from nanobot.channels.manager import ChannelManager
-from nanobot.config.loader import save_config
-from nanobot.config.schema import ChannelsConfig, Config
-from nanobot.providers.transcription import GroqTranscriptionProvider as _GroqProvider
-from nanobot.providers.transcription import OpenAITranscriptionProvider as _OpenAIProvider
-from nanobot.utils.restart import RestartNotice
+from openbot.bus.events import OutboundMessage
+from openbot.bus.queue import MessageBus
+from openbot.channels.base import BaseChannel
+from openbot.channels.manager import ChannelManager
+from openbot.config.loader import save_config
+from openbot.config.schema import ChannelsConfig, Config
+from openbot.providers.transcription import GroqTranscriptionProvider as _GroqProvider
+from openbot.providers.transcription import OpenAITranscriptionProvider as _OpenAIProvider
+from openbot.utils.restart import RestartNotice
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -109,7 +109,7 @@ _EP_TARGET = "importlib.metadata.entry_points"
 
 
 def test_discover_plugins_loads_entry_points():
-    from nanobot.channels.registry import discover_plugins
+    from openbot.channels.registry import discover_plugins
 
     ep = _make_entry_point("line", _FakePlugin)
     with patch(_EP_TARGET, return_value=[ep]):
@@ -120,7 +120,7 @@ def test_discover_plugins_loads_entry_points():
 
 
 def test_discover_plugins_skips_names_outside_enabled_set():
-    from nanobot.channels.registry import discover_plugins
+    from openbot.channels.registry import discover_plugins
 
     loaded: list[str] = []
 
@@ -137,7 +137,7 @@ def test_discover_plugins_skips_names_outside_enabled_set():
 
 
 def test_discover_plugins_handles_load_error():
-    from nanobot.channels.registry import discover_plugins
+    from openbot.channels.registry import discover_plugins
 
     def _boom():
         raise RuntimeError("broken")
@@ -154,7 +154,7 @@ def test_discover_plugins_handles_load_error():
 # ---------------------------------------------------------------------------
 
 def test_discover_all_includes_builtins():
-    from nanobot.channels.registry import discover_all, discover_channel_names
+    from openbot.channels.registry import discover_all, discover_channel_names
 
     with patch(_EP_TARGET, return_value=[]):
         result = discover_all()
@@ -167,7 +167,7 @@ def test_discover_all_includes_builtins():
 
 
 def test_discover_all_includes_external_plugin():
-    from nanobot.channels.registry import discover_all
+    from openbot.channels.registry import discover_all
 
     ep = _make_entry_point("line", _FakePlugin)
     with patch(_EP_TARGET, return_value=[ep]):
@@ -178,7 +178,7 @@ def test_discover_all_includes_external_plugin():
 
 
 def test_discover_enabled_imports_only_enabled_builtins():
-    from nanobot.channels.registry import discover_enabled
+    from openbot.channels.registry import discover_enabled
 
     loaded: list[str] = []
 
@@ -187,7 +187,7 @@ def test_discover_enabled_imports_only_enabled_builtins():
         return _FakePlugin
 
     with (
-        patch("nanobot.channels.registry.load_channel_class", side_effect=_load_channel),
+        patch("openbot.channels.registry.load_channel_class", side_effect=_load_channel),
         patch(_EP_TARGET, return_value=[]),
     ):
         result = discover_enabled({"enabled"}, _names=["enabled", "disabled"])
@@ -197,7 +197,7 @@ def test_discover_enabled_imports_only_enabled_builtins():
 
 
 def test_discover_all_builtin_shadows_plugin():
-    from nanobot.channels.registry import discover_all
+    from openbot.channels.registry import discover_all
 
     ep = _make_entry_point("telegram", _FakeTelegram)
     with patch(_EP_TARGET, return_value=[ep]):
@@ -214,7 +214,7 @@ def test_discover_all_builtin_shadows_plugin():
 @pytest.mark.asyncio
 async def test_manager_loads_plugin_from_dict_config():
     """ChannelManager should instantiate a plugin channel from a raw dict config."""
-    from nanobot.channels.manager import ChannelManager
+    from openbot.channels.manager import ChannelManager
 
     fake_config = SimpleNamespace(
         channels=ChannelsConfig.model_validate({
@@ -224,7 +224,7 @@ async def test_manager_loads_plugin_from_dict_config():
     )
 
     with patch(
-        "nanobot.channels.registry.discover_enabled",
+        "openbot.channels.registry.discover_enabled",
         return_value={"fakeplugin": _FakePlugin},
     ):
         mgr = ChannelManager.__new__(ChannelManager)
@@ -244,7 +244,7 @@ async def test_base_channel_reads_current_transcription_config_each_call(
     monkeypatch: pytest.MonkeyPatch,
 ):
     """BaseChannel.transcribe_audio resolves config at call time, not manager init time."""
-    from nanobot.providers import transcription as transcription_mod
+    from openbot.providers import transcription as transcription_mod
 
     config_path = tmp_path / "config.json"
     config = Config()
@@ -254,7 +254,7 @@ async def test_base_channel_reads_current_transcription_config_each_call(
     config.providers.openai.api_key = "openai-key"
     config.providers.openai.api_base = "http://openai.local/v1/audio/transcriptions"
     save_config(config, config_path)
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", config_path)
+    monkeypatch.setattr("openbot.config.loader._current_config_path", config_path)
 
     channel = _FakePlugin({"enabled": True, "allowFrom": ["*"]}, MessageBus())
 
@@ -329,17 +329,17 @@ async def test_base_channel_respects_disabled_transcription_config(
     config.transcription.enabled = False
     config.providers.groq.api_key = "groq-key"
     save_config(config, config_path)
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", config_path)
+    monkeypatch.setattr("openbot.config.loader._current_config_path", config_path)
 
     channel = _FakePlugin({"enabled": True, "allowFrom": ["*"]}, MessageBus())
 
-    with patch("nanobot.providers.transcription.GroqTranscriptionProvider") as provider:
+    with patch("openbot.providers.transcription.GroqTranscriptionProvider") as provider:
         assert await channel.transcribe_audio("/tmp/does-not-matter.wav") == ""
     provider.assert_not_called()
 
 
 def test_openai_transcription_provider_honors_api_base_argument():
-    from nanobot.providers.transcription import OpenAITranscriptionProvider
+    from openbot.providers.transcription import OpenAITranscriptionProvider
 
     default = OpenAITranscriptionProvider(api_key="k")
     assert default.api_url == "https://api.openai.com/v1/audio/transcriptions"
@@ -393,7 +393,7 @@ async def test_transcription_provider_includes_language(tmp_path, provider_cls, 
     audio.write_bytes(b"audio")
     captured: dict[str, object] = {}
 
-    with patch("nanobot.providers.transcription.httpx.AsyncClient", return_value=_stub_async_client(captured)):
+    with patch("openbot.providers.transcription.httpx.AsyncClient", return_value=_stub_async_client(captured)):
         provider = provider_cls(api_key="k", language=language)
         result = await provider.transcribe(audio)
 
@@ -413,7 +413,7 @@ async def test_transcription_provider_omits_language_when_none(tmp_path, provide
     audio.write_bytes(b"audio")
     captured: dict[str, object] = {}
 
-    with patch("nanobot.providers.transcription.httpx.AsyncClient", return_value=_stub_async_client(captured)):
+    with patch("openbot.providers.transcription.httpx.AsyncClient", return_value=_stub_async_client(captured)):
         provider = provider_cls(api_key="k")
         result = await provider.transcribe(audio)
 
@@ -424,8 +424,8 @@ async def test_transcription_provider_omits_language_when_none(tmp_path, provide
 def test_channels_login_uses_discovered_plugin_class(monkeypatch):
     from typer.testing import CliRunner
 
-    from nanobot.cli.commands import app
-    from nanobot.config.schema import Config
+    from openbot.cli.commands import app
+    from openbot.config.schema import Config
 
     runner = CliRunner()
     seen: dict[str, object] = {}
@@ -438,9 +438,9 @@ def test_channels_login_uses_discovered_plugin_class(monkeypatch):
             seen["config"] = self.config
             return True
 
-    monkeypatch.setattr("nanobot.config.loader.load_config", lambda config_path=None: Config())
+    monkeypatch.setattr("openbot.config.loader.load_config", lambda config_path=None: Config())
     monkeypatch.setattr(
-        "nanobot.channels.registry.discover_all",
+        "openbot.channels.registry.discover_all",
         lambda: {"fakeplugin": _LoginPlugin},
     )
 
@@ -453,8 +453,8 @@ def test_channels_login_uses_discovered_plugin_class(monkeypatch):
 def test_channels_login_sets_custom_config_path(monkeypatch, tmp_path):
     from typer.testing import CliRunner
 
-    from nanobot.cli.commands import app
-    from nanobot.config.schema import Config
+    from openbot.cli.commands import app
+    from openbot.config.schema import Config
 
     runner = CliRunner()
     seen: dict[str, object] = {}
@@ -464,13 +464,13 @@ def test_channels_login_sets_custom_config_path(monkeypatch, tmp_path):
         async def login(self, force: bool = False) -> bool:
             return True
 
-    monkeypatch.setattr("nanobot.config.loader.load_config", lambda config_path=None: Config())
+    monkeypatch.setattr("openbot.config.loader.load_config", lambda config_path=None: Config())
     monkeypatch.setattr(
-        "nanobot.config.loader.set_config_path",
+        "openbot.config.loader.set_config_path",
         lambda path: seen.__setitem__("config_path", path),
     )
     monkeypatch.setattr(
-        "nanobot.channels.registry.discover_all",
+        "openbot.channels.registry.discover_all",
         lambda: {"fakeplugin": _LoginPlugin},
     )
 
@@ -483,19 +483,19 @@ def test_channels_login_sets_custom_config_path(monkeypatch, tmp_path):
 def test_channels_status_sets_custom_config_path(monkeypatch, tmp_path):
     from typer.testing import CliRunner
 
-    from nanobot.cli.commands import app
-    from nanobot.config.schema import Config
+    from openbot.cli.commands import app
+    from openbot.config.schema import Config
 
     runner = CliRunner()
     seen: dict[str, object] = {}
     config_path = tmp_path / "custom-config.json"
 
-    monkeypatch.setattr("nanobot.config.loader.load_config", lambda config_path=None: Config())
+    monkeypatch.setattr("openbot.config.loader.load_config", lambda config_path=None: Config())
     monkeypatch.setattr(
-        "nanobot.config.loader.set_config_path",
+        "openbot.config.loader.set_config_path",
         lambda path: seen.__setitem__("config_path", path),
     )
-    monkeypatch.setattr("nanobot.channels.registry.discover_all", lambda: {})
+    monkeypatch.setattr("openbot.channels.registry.discover_all", lambda: {})
 
     result = runner.invoke(app, ["channels", "status", "--config", str(config_path)])
 
@@ -530,7 +530,7 @@ async def test_manager_skips_disabled_plugin():
 
 def test_builtin_channel_default_config():
     """Built-in channels expose default_config() returning a dict with 'enabled': False."""
-    from nanobot.channels.telegram import TelegramChannel
+    from openbot.channels.telegram import TelegramChannel
     cfg = TelegramChannel.default_config()
     assert isinstance(cfg, dict)
     assert cfg["enabled"] is False
@@ -539,7 +539,7 @@ def test_builtin_channel_default_config():
 
 def test_builtin_channel_init_from_dict():
     """Built-in channels accept a raw dict and convert to Pydantic internally."""
-    from nanobot.channels.telegram import TelegramChannel
+    from openbot.channels.telegram import TelegramChannel
     bus = MessageBus()
     ch = TelegramChannel({"enabled": False, "token": "test-tok", "allowFrom": ["*"]}, bus)
     assert ch.config.token == "test-tok"
@@ -670,7 +670,7 @@ async def test_send_with_retry_retries_on_failure():
     msg = OutboundMessage(channel="failing", chat_id="123", content="test")
 
     # Patch asyncio.sleep to avoid actual delays
-    with patch("nanobot.channels.manager.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+    with patch("openbot.channels.manager.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         await mgr._send_with_retry(mgr.channels["failing"], msg)
 
     assert call_count == 3  # 3 total attempts (initial + 2 retries)
@@ -710,7 +710,7 @@ async def test_send_with_retry_no_retry_when_max_is_zero():
 
     msg = OutboundMessage(channel="failing", chat_id="123", content="test")
 
-    with patch("nanobot.channels.manager.asyncio.sleep", new_callable=AsyncMock):
+    with patch("openbot.channels.manager.asyncio.sleep", new_callable=AsyncMock):
         await mgr._send_with_retry(mgr.channels["failing"], msg)
 
     assert call_count == 1  # Called once but no retry (max(0, 1) = 1)
@@ -918,7 +918,7 @@ async def test_send_with_retry_propagates_cancelled_error_during_sleep():
     async def cancel_during_sleep(_):
         raise asyncio.CancelledError("cancelled during sleep")
 
-    with patch("nanobot.channels.manager.asyncio.sleep", side_effect=cancel_during_sleep):
+    with patch("openbot.channels.manager.asyncio.sleep", side_effect=cancel_during_sleep):
         with pytest.raises(asyncio.CancelledError):
             await mgr._send_with_retry(mgr.channels["failing"], msg)
 
@@ -1297,7 +1297,7 @@ async def test_notify_restart_done_enqueues_outbound_message():
     mgr._send_with_retry = AsyncMock()
 
     notice = RestartNotice(channel="feishu", chat_id="oc_123", started_at_raw="100.0")
-    with patch("nanobot.channels.manager.consume_restart_notice_from_env", return_value=notice):
+    with patch("openbot.channels.manager.consume_restart_notice_from_env", return_value=notice):
         mgr._notify_restart_done_if_needed()
 
     await asyncio.sleep(0)

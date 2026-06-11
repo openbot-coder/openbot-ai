@@ -1,15 +1,15 @@
 # Channel Plugin Guide
 
-Build a custom nanobot channel in three steps: subclass, package, install.
+Build a custom openbot channel in three steps: subclass, package, install.
 
-> **Note:** We recommend developing channel plugins against a source checkout of nanobot (`python -m pip install -e .`) rather than a PyPI release, so you always have access to the latest base-channel features and APIs.
+> **Note:** We recommend developing channel plugins against a source checkout of openbot (`python -m pip install -e .`) rather than a PyPI release, so you always have access to the latest base-channel features and APIs.
 
 ## How It Works
 
-nanobot discovers channel plugins via Python [entry points](https://packaging.python.org/en/latest/specifications/entry-points/). When `nanobot gateway` starts, it scans:
+openbot discovers channel plugins via Python [entry points](https://packaging.python.org/en/latest/specifications/entry-points/). When `openbot gateway` starts, it scans:
 
-1. Built-in channels in `nanobot/channels/`
-2. External packages registered under the `nanobot.channels` entry point group
+1. Built-in channels in `openbot/channels/`
+2. External packages registered under the `openbot.channels` entry point group
 
 If a matching config section has `"enabled": true`, the channel is instantiated and started.
 
@@ -20,8 +20,8 @@ We'll build a minimal webhook channel that receives messages via HTTP POST and s
 ### Project Structure
 
 ```text
-nanobot-channel-webhook/
-├── nanobot_channel_webhook/
+openbot-channel-webhook/
+├── openbot_channel_webhook/
 │   ├── __init__.py          # re-export WebhookChannel
 │   └── channel.py           # channel implementation
 └── pyproject.toml
@@ -30,14 +30,14 @@ nanobot-channel-webhook/
 ### 1. Create Your Channel
 
 ```python
-# nanobot_channel_webhook/__init__.py
-from nanobot_channel_webhook.channel import WebhookChannel
+# openbot_channel_webhook/__init__.py
+from openbot_channel_webhook.channel import WebhookChannel
 
 __all__ = ["WebhookChannel"]
 ```
 
 ```python
-# nanobot_channel_webhook/channel.py
+# openbot_channel_webhook/channel.py
 import asyncio
 from typing import Any
 
@@ -45,10 +45,10 @@ from aiohttp import web
 from loguru import logger
 from pydantic import Field
 
-from nanobot.channels.base import BaseChannel
-from nanobot.bus.events import OutboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.config.schema import Base
+from openbot.channels.base import BaseChannel
+from openbot.bus.events import OutboundMessage
+from openbot.bus.queue import MessageBus
+from openbot.config.schema import Base
 
 
 class WebhookConfig(Base):
@@ -133,19 +133,19 @@ class WebhookChannel(BaseChannel):
 ```toml
 # pyproject.toml
 [project]
-name = "nanobot-channel-webhook"
+name = "openbot-channel-webhook"
 version = "0.1.0"
-dependencies = ["nanobot-ai", "aiohttp"]
+dependencies = ["openbot-ai", "aiohttp"]
 
-[project.entry-points."nanobot.channels"]
-webhook = "nanobot_channel_webhook:WebhookChannel"
+[project.entry-points."openbot.channels"]
+webhook = "openbot_channel_webhook:WebhookChannel"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["nanobot_channel_webhook"]
+packages = ["openbot_channel_webhook"]
 ```
 
 The key (`webhook`) becomes the config section name. The value points to your `BaseChannel` subclass.
@@ -154,11 +154,11 @@ The key (`webhook`) becomes the config section name. The value points to your `B
 
 ```bash
 python -m pip install -e .
-nanobot plugins list      # verify "Webhook" shows as "plugin"
-nanobot onboard           # auto-adds default config for detected plugins
+openbot plugins list      # verify "Webhook" shows as "plugin"
+openbot onboard           # auto-adds default config for detected plugins
 ```
 
-Edit `~/.nanobot/config.json`:
+Edit `~/.openbot/config.json`:
 
 ```json
 {
@@ -175,7 +175,7 @@ Edit `~/.nanobot/config.json`:
 ### 4. Run & Test
 
 ```bash
-nanobot gateway
+openbot gateway
 ```
 
 In another terminal:
@@ -223,8 +223,8 @@ Channels that don't need interactive login (e.g. Telegram with bot token, Discor
 
 Users trigger interactive login via:
 ```bash
-nanobot channels login <channel_name>
-nanobot channels login <channel_name> --force  # re-authenticate
+openbot channels login <channel_name>
+openbot channels login <channel_name> --force  # re-authenticate
 ```
 
 ### Provided by Base
@@ -233,7 +233,7 @@ nanobot channels login <channel_name> --force  # re-authenticate
 |-------------------|-------------|
 | `_handle_message(sender_id, chat_id, content, media?, metadata?, session_key?)` | **Call this when you receive a message.** Checks `is_allowed()`, then publishes to the bus. Automatically sets `_wants_stream` if `supports_streaming` is true. |
 | `is_allowed(sender_id)` | Checks against `config.allow_from`; `"*"` allows all, `[]` denies all. |
-| `default_config()` (classmethod) | Returns default config dict for `nanobot onboard`. Override to declare your fields. |
+| `default_config()` (classmethod) | Returns default config dict for `openbot onboard`. Override to declare your fields. |
 | `transcribe_audio(file_path)` | Transcribes audio via the shared top-level `transcription` config (if configured). |
 | `supports_streaming` (property) | `True` when config has `"streaming": true` **and** subclass overrides `send_delta()`. |
 | `is_running` | Returns `self._running`. |
@@ -355,7 +355,7 @@ When `streaming` is `false` (default) or omitted, only `send()` is called — no
 
 ## Progress, Tool Hints, and Reasoning
 
-Besides normal assistant text, nanobot can emit low-emphasis trace blocks. These are intended for UI affordances like status rows, collapsible "used tools" groups, or reasoning/thinking blocks. Platforms that do not have a good place for them can ignore them safely.
+Besides normal assistant text, openbot can emit low-emphasis trace blocks. These are intended for UI affordances like status rows, collapsible "used tools" groups, or reasoning/thinking blocks. Platforms that do not have a good place for them can ignore them safely.
 
 ### Progress and Tool Hints
 
@@ -465,15 +465,15 @@ Recommended rendering:
 
 `BaseChannel.is_allowed()` reads the permission list via `getattr(self.config, "allow_from", [])`. This works for Pydantic models where `allow_from` is a real Python attribute, but **fails silently for plain `dict`** — `dict` has no `allow_from` attribute, so `getattr` always returns the default `[]`, causing all messages to be denied.
 
-Built-in channels use Pydantic config models (subclassing `Base` from `nanobot.config.schema`). Plugin channels **must do the same**.
+Built-in channels use Pydantic config models (subclassing `Base` from `openbot.config.schema`). Plugin channels **must do the same**.
 
 ### Pattern
 
-1. Define a Pydantic model inheriting from `nanobot.config.schema.Base`:
+1. Define a Pydantic model inheriting from `openbot.config.schema.Base`:
 
 ```python
 from pydantic import Field
-from nanobot.config.schema import Base
+from openbot.config.schema import Base
 
 class WebhookConfig(Base):
     """Webhook channel configuration."""
@@ -488,7 +488,7 @@ class WebhookConfig(Base):
 
 ```python
 from typing import Any
-from nanobot.bus.queue import MessageBus
+from openbot.bus.queue import MessageBus
 
 class WebhookChannel(BaseChannel):
     def __init__(self, config: Any, bus: MessageBus):
@@ -507,7 +507,7 @@ async def start(self) -> None:
 
 `allowFrom` is handled automatically by `_handle_message()` — you don't need to check it yourself.
 
-Override `default_config()` so `nanobot onboard` auto-populates `config.json`:
+Override `default_config()` so `openbot onboard` auto-populates `config.json`:
 
 ```python
 @classmethod
@@ -523,25 +523,25 @@ If not overridden, the base class returns `{"enabled": false}`.
 
 | What | Format | Example |
 |------|--------|---------|
-| PyPI package | `nanobot-channel-{name}` | `nanobot-channel-webhook` |
+| PyPI package | `openbot-channel-{name}` | `openbot-channel-webhook` |
 | Entry point key | `{name}` | `webhook` |
 | Config section | `channels.{name}` | `channels.webhook` |
-| Python package | `nanobot_channel_{name}` | `nanobot_channel_webhook` |
+| Python package | `openbot_channel_{name}` | `openbot_channel_webhook` |
 
 ## Local Development
 
 ```bash
-git clone https://github.com/you/nanobot-channel-webhook
-cd nanobot-channel-webhook
+git clone https://github.com/you/openbot-channel-webhook
+cd openbot-channel-webhook
 python -m pip install -e .
-nanobot plugins list    # should show "Webhook" as "plugin"
-nanobot gateway         # test end-to-end
+openbot plugins list    # should show "Webhook" as "plugin"
+openbot gateway         # test end-to-end
 ```
 
 ## Verify
 
 ```bash
-$ nanobot plugins list
+$ openbot plugins list
 
   Name       Source    Enabled
   telegram   builtin  yes

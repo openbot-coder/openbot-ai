@@ -68,7 +68,7 @@ export class UnixWebSocketClient {
     socket.write(
       [
         `GET ${path} HTTP/1.1`,
-        "Host: nanobot.host",
+        "Host: openbot.host",
         "Upgrade: websocket",
         "Connection: Upgrade",
         `Sec-WebSocket-Key: ${key}`,

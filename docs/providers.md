@@ -12,15 +12,15 @@ Prefer a named `modelPresets` entry for the model/provider pair, then select it 
 
 ## Choose a Provider Without Guessing
 
-The docs show concrete provider names so the JSON is copyable, not because nanobot ranks providers. Start from the service or endpoint you actually control:
+The docs show concrete provider names so the JSON is copyable, not because openbot ranks providers. Start from the service or endpoint you actually control:
 
 | If you have... | Configure... |
 |---|---|
 | An API key from a hosted provider or gateway | That provider's `providers.<name>.apiKey`, then a preset with that provider name and a model ID from that service. |
 | A company proxy or regional endpoint | The matching provider block plus `apiBase` if the proxy gives you a URL. |
 | A local OpenAI-compatible server | A local provider block such as `ollama`, `vllm`, `lmStudio`, or `custom`, usually with `apiBase`. |
-| An OAuth-based account | Run the matching `nanobot provider login ...` command, then select that provider explicitly in a preset. |
-| No provider yet | Pick one outside nanobot based on account access, pricing, regional availability, privacy requirements, and the model IDs you need. Then come back with its key and model ID. |
+| An OAuth-based account | Run the matching `openbot provider login ...` command, then select that provider explicitly in a preset. |
+| No provider yet | Pick one outside openbot based on account access, pricing, regional availability, privacy requirements, and the model IDs you need. Then come back with its key and model ID. |
 
 ## Minimal Shape
 
@@ -48,7 +48,7 @@ The docs show concrete provider names so the JSON is copyable, not because nanob
 }
 ```
 
-The provider config gives nanobot credentials and endpoint details. The model preset names the provider/model pair. The agent defaults choose which named preset to use for normal turns. Replace the example provider and model together; mixing an API key from one provider with a model ID from another is the most common first-run failure.
+The provider config gives openbot credentials and endpoint details. The model preset names the provider/model pair. The agent defaults choose which named preset to use for normal turns. Replace the example provider and model together; mixing an API key from one provider with a model ID from another is the most common first-run failure.
 
 ## Provider, Model, API Key, and Base URL
 
@@ -56,12 +56,12 @@ These fields answer different questions:
 
 | Field | Where it lives | Meaning |
 |---|---|---|
-| `provider` | `modelPresets.<name>.provider` | Which nanobot provider adapter should send the request. |
+| `provider` | `modelPresets.<name>.provider` | Which openbot provider adapter should send the request. |
 | `model` | `modelPresets.<name>.model` | The model ID expected by that provider or gateway. |
 | `apiKey` | `providers.<provider>.apiKey` | Credential for that provider. Use `${ENV_VAR}` for secrets. |
 | `apiBase` | `providers.<provider>.apiBase` | HTTP base URL of the provider endpoint. |
 
-You usually omit `apiBase` for hosted built-in providers such as OpenRouter, Anthropic direct, OpenAI direct, Groq, or Bedrock because nanobot knows their default endpoints. Set `apiBase` for `custom`, local OpenAI-compatible servers, provider proxies, regional endpoints, or subscription endpoints. Include the API version path when the endpoint requires it, for example `https://api.example.com/v1` or `http://localhost:11434/v1`.
+You usually omit `apiBase` for hosted built-in providers such as OpenRouter, Anthropic direct, OpenAI direct, Groq, or Bedrock because openbot knows their default endpoints. Set `apiBase` for `custom`, local OpenAI-compatible servers, provider proxies, regional endpoints, or subscription endpoints. Include the API version path when the endpoint requires it, for example `https://api.example.com/v1` or `http://localhost:11434/v1`.
 
 ## Common Provider Patterns
 
@@ -180,7 +180,7 @@ The `custom` provider fits OpenAI-compatible endpoints that are not represented 
 
 ### Ollama
 
-Start Ollama separately, then point nanobot at the OpenAI-compatible endpoint.
+Start Ollama separately, then point openbot at the OpenAI-compatible endpoint.
 
 ```json
 {
@@ -297,8 +297,8 @@ See [`configuration.md#providers`](./configuration.md#providers) for Bedrock-spe
 Some providers do not use API keys in `config.json`.
 
 ```bash
-nanobot provider login openai-codex
-nanobot provider login github-copilot
+openbot provider login openai-codex
+openbot provider login github-copilot
 ```
 
 Then explicitly select the provider and model in a preset. OAuth providers are not valid automatic fallbacks.
@@ -392,7 +392,7 @@ Fallbacks are useful for transient provider failures, rate limits, or model avai
 }
 ```
 
-String entries in `fallbackModels` are preset names, not raw model names. nanobot tries them in order after the active preset. Each fallback preset uses its own `provider`, `model`, `maxTokens`, `contextWindowTokens`, `temperature`, and optional `reasoningEffort`.
+String entries in `fallbackModels` are preset names, not raw model names. openbot tries them in order after the active preset. Each fallback preset uses its own `provider`, `model`, `maxTokens`, `contextWindowTokens`, `temperature`, and optional `reasoningEffort`.
 
 Use inline fallback objects only when a model is not worth naming as a preset:
 
@@ -422,18 +422,18 @@ Use inline fallback objects only when a model is not worth naming as a preset:
 }
 ```
 
-`fallbackModels` belongs under `agents.defaults`, not inside each preset. If fallback candidates use smaller context windows, nanobot builds context using the smallest window in the active chain so every candidate can receive the same prompt. See [`configuration.md#model-fallbacks`](./configuration.md#model-fallbacks) for failure conditions.
+`fallbackModels` belongs under `agents.defaults`, not inside each preset. If fallback candidates use smaller context windows, openbot builds context using the smallest window in the active chain so every candidate can receive the same prompt. See [`configuration.md#model-fallbacks`](./configuration.md#model-fallbacks) for failure conditions.
 
 ## Quick Checks
 
 Run these before debugging a chat app:
 
 ```bash
-nanobot status
-nanobot agent -m "Hello!"
+openbot status
+openbot agent -m "Hello!"
 ```
 
-If `nanobot agent -m "Hello!"` fails:
+If `openbot agent -m "Hello!"` fails:
 
 | Symptom | Likely cause |
 |---|---|

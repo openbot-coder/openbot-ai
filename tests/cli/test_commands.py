@@ -8,13 +8,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from nanobot.bus.events import OutboundMessage
-from nanobot.cli.commands import _proactive_delivery_metadata, app
-from nanobot.config.schema import Config
-from nanobot.cron.types import CronJob, CronPayload
-from nanobot.providers.factory import ProviderSnapshot, make_provider
-from nanobot.providers.openai_codex_provider import _strip_model_prefix
-from nanobot.providers.registry import find_by_name
+from openbot.bus.events import OutboundMessage
+from openbot.cli.commands import _proactive_delivery_metadata, app
+from openbot.config.schema import Config
+from openbot.cron.types import CronJob, CronPayload
+from openbot.providers.factory import ProviderSnapshot, make_provider
+from openbot.providers.openai_codex_provider import _strip_model_prefix
+from openbot.providers.registry import find_by_name
 
 runner = CliRunner()
 
@@ -54,10 +54,10 @@ class _StopGatewayError(RuntimeError):
 @pytest.fixture
 def mock_paths():
     """Mock config/workspace paths for test isolation."""
-    with patch("nanobot.config.loader.get_config_path") as mock_cp, \
-         patch("nanobot.config.loader.save_config") as mock_sc, \
-         patch("nanobot.config.loader.load_config") as mock_lc, \
-         patch("nanobot.cli.commands.get_workspace_path") as mock_ws:
+    with patch("openbot.config.loader.get_config_path") as mock_cp, \
+         patch("openbot.config.loader.save_config") as mock_sc, \
+         patch("openbot.config.loader.load_config") as mock_lc, \
+         patch("openbot.cli.commands.get_workspace_path") as mock_ws:
         base_dir = Path("./test_onboard_data")
         if base_dir.exists():
             shutil.rmtree(base_dir)
@@ -92,7 +92,7 @@ def test_onboard_fresh_install(mock_paths):
     assert result.exit_code == 0
     assert "Created config" in result.stdout
     assert "Created workspace" in result.stdout
-    assert "nanobot is ready" in result.stdout
+    assert "openbot is ready" in result.stdout
     assert config_file.exists()
     assert (workspace_dir / "AGENTS.md").exists()
     assert (workspace_dir / "memory" / "MEMORY.md").exists()
@@ -163,10 +163,10 @@ def test_onboard_help_shows_workspace_and_config_options():
 def test_onboard_interactive_discard_does_not_save_or_create_workspace(mock_paths, monkeypatch):
     config_file, workspace_dir, _ = mock_paths
 
-    from nanobot.cli.onboard import OnboardResult
+    from openbot.cli.onboard import OnboardResult
 
     monkeypatch.setattr(
-        "nanobot.cli.onboard.run_onboard",
+        "openbot.cli.onboard.run_onboard",
         lambda initial_config: OnboardResult(config=initial_config, should_save=False),
     )
 
@@ -182,7 +182,7 @@ def test_onboard_uses_explicit_config_and_workspace_paths(tmp_path, monkeypatch)
     config_path = tmp_path / "instance" / "config.json"
     workspace_path = tmp_path / "workspace"
 
-    monkeypatch.setattr("nanobot.channels.registry.discover_all", lambda: {})
+    monkeypatch.setattr("openbot.channels.registry.discover_all", lambda: {})
 
     result = runner.invoke(
         app,
@@ -204,13 +204,13 @@ def test_onboard_wizard_preserves_explicit_config_in_next_steps(tmp_path, monkey
     config_path = tmp_path / "instance" / "config.json"
     workspace_path = tmp_path / "workspace"
 
-    from nanobot.cli.onboard import OnboardResult
+    from openbot.cli.onboard import OnboardResult
 
     monkeypatch.setattr(
-        "nanobot.cli.onboard.run_onboard",
+        "openbot.cli.onboard.run_onboard",
         lambda initial_config: OnboardResult(config=initial_config, should_save=True),
     )
-    monkeypatch.setattr("nanobot.channels.registry.discover_all", lambda: {})
+    monkeypatch.setattr("openbot.channels.registry.discover_all", lambda: {})
 
     result = runner.invoke(
         app,
@@ -221,8 +221,8 @@ def test_onboard_wizard_preserves_explicit_config_in_next_steps(tmp_path, monkey
     stripped_output = _strip_ansi(result.stdout)
     compact_output = stripped_output.replace("\n", "")
     resolved_config = str(config_path.resolve())
-    assert f'nanobot agent -m "Hello!" --config {resolved_config}' in compact_output
-    assert f"nanobot gateway --config {resolved_config}" in compact_output
+    assert f'openbot agent -m "Hello!" --config {resolved_config}' in compact_output
+    assert f"openbot gateway --config {resolved_config}" in compact_output
 
 
 def test_config_matches_github_copilot_codex_with_hyphen_prefix():
@@ -311,7 +311,7 @@ def test_provider_logout_paths_resolve_to_expected_files():
     from oauth_cli_kit.providers import OPENAI_CODEX_PROVIDER
     from oauth_cli_kit.storage import FileTokenStorage
 
-    from nanobot.providers.github_copilot_provider import get_storage
+    from openbot.providers.github_copilot_provider import get_storage
 
     codex_storage = FileTokenStorage(token_filename=OPENAI_CODEX_PROVIDER.token_filename)
     codex_path = codex_storage.get_token_path()
@@ -553,17 +553,17 @@ def test_config_falls_back_to_vllm_when_ollama_not_configured():
 
 
 def test_openai_compat_provider_passes_model_through():
-    from nanobot.providers.openai_compat_provider import OpenAICompatProvider
+    from openbot.providers.openai_compat_provider import OpenAICompatProvider
 
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI"):
+    with patch("openbot.providers.openai_compat_provider.AsyncOpenAI"):
         provider = OpenAICompatProvider(default_model="github-copilot/gpt-5.3-codex")
 
     assert provider.get_default_model() == "github-copilot/gpt-5.3-codex"
 
 
 def test_make_provider_uses_github_copilot_backend():
-    from nanobot.config.schema import Config
-    from nanobot.providers.factory import make_provider
+    from openbot.config.schema import Config
+    from openbot.providers.factory import make_provider
 
     config = Config.model_validate(
         {
@@ -576,16 +576,16 @@ def test_make_provider_uses_github_copilot_backend():
         }
     )
 
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI"):
+    with patch("openbot.providers.openai_compat_provider.AsyncOpenAI"):
         provider = make_provider(config)
 
     assert provider.__class__.__name__ == "GitHubCopilotProvider"
 
 
 def test_github_copilot_provider_strips_prefixed_model_name():
-    from nanobot.providers.github_copilot_provider import GitHubCopilotProvider
+    from openbot.providers.github_copilot_provider import GitHubCopilotProvider
 
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI"):
+    with patch("openbot.providers.openai_compat_provider.AsyncOpenAI"):
         provider = GitHubCopilotProvider(default_model="github-copilot/gpt-5.1")
 
     kwargs = provider._build_kwargs(
@@ -603,7 +603,7 @@ def test_github_copilot_provider_strips_prefixed_model_name():
 
 @pytest.mark.asyncio
 async def test_github_copilot_provider_refreshes_client_api_key_before_chat():
-    from nanobot.providers.github_copilot_provider import GitHubCopilotProvider
+    from openbot.providers.github_copilot_provider import GitHubCopilotProvider
 
     mock_client = MagicMock()
     mock_client.api_key = "no-key"
@@ -612,7 +612,7 @@ async def test_github_copilot_provider_refreshes_client_api_key_before_chat():
         "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
     })
 
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI", return_value=mock_client):
+    with patch("openbot.providers.openai_compat_provider.AsyncOpenAI", return_value=mock_client):
         provider = GitHubCopilotProvider(default_model="github-copilot/gpt-4")
         await provider._ensure_client()
 
@@ -653,7 +653,7 @@ def test_make_provider_passes_extra_headers_to_custom_provider():
         }
     )
 
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI") as mock_async_openai:
+    with patch("openbot.providers.openai_compat_provider.AsyncOpenAI") as mock_async_openai:
         provider = make_provider(config)
         asyncio.run(provider._ensure_client())
 
@@ -670,14 +670,14 @@ def mock_agent_runtime(tmp_path):
     config = Config()
     config.agents.defaults.workspace = str(tmp_path / "default-workspace")
 
-    with patch("nanobot.config.loader.load_config", return_value=config) as mock_load_config, \
-         patch("nanobot.config.loader.resolve_config_env_vars", side_effect=lambda c: c), \
-         patch("nanobot.cli.commands.sync_workspace_templates") as mock_sync_templates, \
-         patch("nanobot.providers.factory.make_provider", return_value=_fake_provider()), \
-         patch("nanobot.cli.commands._print_agent_response") as mock_print_response, \
-         patch("nanobot.bus.queue.MessageBus"), \
-         patch("nanobot.cron.service.CronService"), \
-         patch("nanobot.cli.commands.AgentLoop.from_config") as mock_from_config:
+    with patch("openbot.config.loader.load_config", return_value=config) as mock_load_config, \
+         patch("openbot.config.loader.resolve_config_env_vars", side_effect=lambda c: c), \
+         patch("openbot.cli.commands.sync_workspace_templates") as mock_sync_templates, \
+         patch("openbot.providers.factory.make_provider", return_value=_fake_provider()), \
+         patch("openbot.cli.commands._print_agent_response") as mock_print_response, \
+         patch("openbot.bus.queue.MessageBus"), \
+         patch("openbot.cron.service.CronService"), \
+         patch("openbot.cli.commands.AgentLoop.from_config") as mock_from_config:
         agent_loop = MagicMock()
         agent_loop.channels_config = None
         agent_loop.process_direct = AsyncMock(
@@ -742,14 +742,14 @@ def test_agent_config_sets_active_path(monkeypatch, tmp_path: Path) -> None:
     seen: dict[str, Path] = {}
 
     monkeypatch.setattr(
-        "nanobot.config.loader.set_config_path",
+        "openbot.config.loader.set_config_path",
         lambda path: seen.__setitem__("config_path", path),
     )
-    monkeypatch.setattr("nanobot.config.loader.load_config", lambda _path=None: config)
-    monkeypatch.setattr("nanobot.cli.commands.sync_workspace_templates", lambda _path: None)
-    monkeypatch.setattr("nanobot.providers.factory.make_provider", lambda _config: _fake_provider())
-    monkeypatch.setattr("nanobot.bus.queue.MessageBus", lambda: object())
-    monkeypatch.setattr("nanobot.cron.service.CronService", lambda _store: object())
+    monkeypatch.setattr("openbot.config.loader.load_config", lambda _path=None: config)
+    monkeypatch.setattr("openbot.cli.commands.sync_workspace_templates", lambda _path: None)
+    monkeypatch.setattr("openbot.providers.factory.make_provider", lambda _config: _fake_provider())
+    monkeypatch.setattr("openbot.bus.queue.MessageBus", lambda: object())
+    monkeypatch.setattr("openbot.cron.service.CronService", lambda _store: object())
 
     class _FakeAgentLoop:
         @classmethod
@@ -764,8 +764,8 @@ def test_agent_config_sets_active_path(monkeypatch, tmp_path: Path) -> None:
         async def close_mcp(self) -> None:
             return None
 
-    monkeypatch.setattr("nanobot.cli.commands.AgentLoop", _FakeAgentLoop)
-    monkeypatch.setattr("nanobot.cli.commands._print_agent_response", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("openbot.cli.commands.AgentLoop", _FakeAgentLoop)
+    monkeypatch.setattr("openbot.cli.commands._print_agent_response", lambda *_args, **_kwargs: None)
 
     result = runner.invoke(app, ["agent", "-m", "hello", "-c", str(config_file)])
 
@@ -782,11 +782,11 @@ def test_agent_uses_workspace_directory_for_cron_store(monkeypatch, tmp_path: Pa
     config.agents.defaults.workspace = str(tmp_path / "agent-workspace")
     seen: dict[str, Path] = {}
 
-    monkeypatch.setattr("nanobot.config.loader.set_config_path", lambda _path: None)
-    monkeypatch.setattr("nanobot.config.loader.load_config", lambda _path=None: config)
-    monkeypatch.setattr("nanobot.cli.commands.sync_workspace_templates", lambda _path: None)
-    monkeypatch.setattr("nanobot.providers.factory.make_provider", lambda _config: _fake_provider())
-    monkeypatch.setattr("nanobot.bus.queue.MessageBus", lambda: object())
+    monkeypatch.setattr("openbot.config.loader.set_config_path", lambda _path: None)
+    monkeypatch.setattr("openbot.config.loader.load_config", lambda _path=None: config)
+    monkeypatch.setattr("openbot.cli.commands.sync_workspace_templates", lambda _path: None)
+    monkeypatch.setattr("openbot.providers.factory.make_provider", lambda _config: _fake_provider())
+    monkeypatch.setattr("openbot.bus.queue.MessageBus", lambda: object())
 
     class _FakeCron:
         def __init__(self, store_path: Path) -> None:
@@ -805,9 +805,9 @@ def test_agent_uses_workspace_directory_for_cron_store(monkeypatch, tmp_path: Pa
         async def close_mcp(self) -> None:
             return None
 
-    monkeypatch.setattr("nanobot.cron.service.CronService", _FakeCron)
-    monkeypatch.setattr("nanobot.cli.commands.AgentLoop", _FakeAgentLoop)
-    monkeypatch.setattr("nanobot.cli.commands._print_agent_response", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("openbot.cron.service.CronService", _FakeCron)
+    monkeypatch.setattr("openbot.cli.commands.AgentLoop", _FakeAgentLoop)
+    monkeypatch.setattr("openbot.cli.commands._print_agent_response", lambda *_args, **_kwargs: None)
 
     result = runner.invoke(app, ["agent", "-m", "hello", "-c", str(config_file)])
 
@@ -831,12 +831,12 @@ def test_agent_workspace_override_does_not_migrate_legacy_cron(
     config = Config()
     seen: dict[str, Path] = {}
 
-    monkeypatch.setattr("nanobot.config.loader.set_config_path", lambda _path: None)
-    monkeypatch.setattr("nanobot.config.loader.load_config", lambda _path=None: config)
-    monkeypatch.setattr("nanobot.cli.commands.sync_workspace_templates", lambda _path: None)
-    monkeypatch.setattr("nanobot.providers.factory.make_provider", lambda _config: _fake_provider())
-    monkeypatch.setattr("nanobot.bus.queue.MessageBus", lambda: object())
-    monkeypatch.setattr("nanobot.config.paths.get_cron_dir", lambda: legacy_dir)
+    monkeypatch.setattr("openbot.config.loader.set_config_path", lambda _path: None)
+    monkeypatch.setattr("openbot.config.loader.load_config", lambda _path=None: config)
+    monkeypatch.setattr("openbot.cli.commands.sync_workspace_templates", lambda _path: None)
+    monkeypatch.setattr("openbot.providers.factory.make_provider", lambda _config: _fake_provider())
+    monkeypatch.setattr("openbot.bus.queue.MessageBus", lambda: object())
+    monkeypatch.setattr("openbot.config.paths.get_cron_dir", lambda: legacy_dir)
 
     class _FakeCron:
         def __init__(self, store_path: Path) -> None:
@@ -855,9 +855,9 @@ def test_agent_workspace_override_does_not_migrate_legacy_cron(
         async def close_mcp(self) -> None:
             return None
 
-    monkeypatch.setattr("nanobot.cron.service.CronService", _FakeCron)
-    monkeypatch.setattr("nanobot.cli.commands.AgentLoop", _FakeAgentLoop)
-    monkeypatch.setattr("nanobot.cli.commands._print_agent_response", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("openbot.cron.service.CronService", _FakeCron)
+    monkeypatch.setattr("openbot.cli.commands.AgentLoop", _FakeAgentLoop)
+    monkeypatch.setattr("openbot.cli.commands._print_agent_response", lambda *_args, **_kwargs: None)
 
     result = runner.invoke(
         app,
@@ -887,12 +887,12 @@ def test_agent_custom_config_workspace_does_not_migrate_legacy_cron(
     config.agents.defaults.workspace = str(custom_workspace)
     seen: dict[str, Path] = {}
 
-    monkeypatch.setattr("nanobot.config.loader.set_config_path", lambda _path: None)
-    monkeypatch.setattr("nanobot.config.loader.load_config", lambda _path=None: config)
-    monkeypatch.setattr("nanobot.cli.commands.sync_workspace_templates", lambda _path: None)
-    monkeypatch.setattr("nanobot.providers.factory.make_provider", lambda _config: _fake_provider())
-    monkeypatch.setattr("nanobot.bus.queue.MessageBus", lambda: object())
-    monkeypatch.setattr("nanobot.config.paths.get_cron_dir", lambda: legacy_dir)
+    monkeypatch.setattr("openbot.config.loader.set_config_path", lambda _path: None)
+    monkeypatch.setattr("openbot.config.loader.load_config", lambda _path=None: config)
+    monkeypatch.setattr("openbot.cli.commands.sync_workspace_templates", lambda _path: None)
+    monkeypatch.setattr("openbot.providers.factory.make_provider", lambda _config: _fake_provider())
+    monkeypatch.setattr("openbot.bus.queue.MessageBus", lambda: object())
+    monkeypatch.setattr("openbot.config.paths.get_cron_dir", lambda: legacy_dir)
 
     class _FakeCron:
         def __init__(self, store_path: Path) -> None:
@@ -911,10 +911,10 @@ def test_agent_custom_config_workspace_does_not_migrate_legacy_cron(
         async def close_mcp(self) -> None:
             return None
 
-    monkeypatch.setattr("nanobot.cron.service.CronService", _FakeCron)
-    monkeypatch.setattr("nanobot.cli.commands.AgentLoop", _FakeAgentLoop)
+    monkeypatch.setattr("openbot.cron.service.CronService", _FakeCron)
+    monkeypatch.setattr("openbot.cli.commands.AgentLoop", _FakeAgentLoop)
     monkeypatch.setattr(
-        "nanobot.cli.commands._print_agent_response", lambda *_args, **_kwargs: None
+        "openbot.cli.commands._print_agent_response", lambda *_args, **_kwargs: None
     )
 
     result = runner.invoke(app, ["agent", "-m", "hello", "-c", str(config_file)])
@@ -987,14 +987,14 @@ def test_heartbeat_retains_recent_messages_by_default():
     ],
 )
 def test_heartbeat_has_active_tasks(content, expected):
-    from nanobot.cli.commands import _heartbeat_has_active_tasks
+    from openbot.cli.commands import _heartbeat_has_active_tasks
 
     assert _heartbeat_has_active_tasks(content) is expected
 
 
 def test_heartbeat_skips_bundled_template():
-    from nanobot.cli.commands import _heartbeat_has_active_tasks
-    from nanobot.utils.helpers import load_bundled_template
+    from openbot.cli.commands import _heartbeat_has_active_tasks
+    from openbot.utils.helpers import load_bundled_template
 
     assert _heartbeat_has_active_tasks(load_bundled_template("HEARTBEAT.md")) is False
 
@@ -1034,36 +1034,36 @@ def _patch_cli_command_runtime(
     provider_factory = make_provider or (lambda _config: _fake_provider())
 
     monkeypatch.setattr(
-        "nanobot.config.loader.set_config_path",
+        "openbot.config.loader.set_config_path",
         set_config_path or (lambda _path: None),
     )
-    monkeypatch.setattr("nanobot.config.loader.load_config", lambda _path=None: config)
-    monkeypatch.setattr("nanobot.config.loader.resolve_config_env_vars", lambda c: c)
+    monkeypatch.setattr("openbot.config.loader.load_config", lambda _path=None: config)
+    monkeypatch.setattr("openbot.config.loader.resolve_config_env_vars", lambda c: c)
     monkeypatch.setattr(
-        "nanobot.cli.commands.sync_workspace_templates",
+        "openbot.cli.commands.sync_workspace_templates",
         sync_templates or (lambda _path: None),
     )
     monkeypatch.setattr(
-        "nanobot.providers.factory.make_provider",
+        "openbot.providers.factory.make_provider",
         provider_factory,
     )
     monkeypatch.setattr(
-        "nanobot.providers.factory.build_provider_snapshot",
+        "openbot.providers.factory.build_provider_snapshot",
         lambda _config: _test_provider_snapshot(provider_factory(_config), _config),
     )
     monkeypatch.setattr(
-        "nanobot.providers.factory.load_provider_snapshot",
+        "openbot.providers.factory.load_provider_snapshot",
         lambda _config_path=None: _test_provider_snapshot(provider_factory(config), config),
     )
 
     if message_bus is not None:
-        monkeypatch.setattr("nanobot.bus.queue.MessageBus", message_bus)
+        monkeypatch.setattr("openbot.bus.queue.MessageBus", message_bus)
     if session_manager is not None:
-        monkeypatch.setattr("nanobot.session.manager.SessionManager", session_manager)
+        monkeypatch.setattr("openbot.session.manager.SessionManager", session_manager)
     if cron_service is not None:
-        monkeypatch.setattr("nanobot.cron.service.CronService", cron_service)
+        monkeypatch.setattr("openbot.cron.service.CronService", cron_service)
     if get_cron_dir is not None:
-        monkeypatch.setattr("nanobot.config.paths.get_cron_dir", get_cron_dir)
+        monkeypatch.setattr("openbot.config.paths.get_cron_dir", get_cron_dir)
 
 
 def _patch_serve_runtime(monkeypatch, config: Config, seen: dict[str, object]) -> None:
@@ -1104,8 +1104,8 @@ def _patch_serve_runtime(monkeypatch, config: Config, seen: dict[str, object]) -
         message_bus=lambda: object(),
         session_manager=lambda _workspace: object(),
     )
-    monkeypatch.setattr("nanobot.cli.commands.AgentLoop", _FakeAgentLoop)
-    monkeypatch.setattr("nanobot.api.server.create_app", _fake_create_app)
+    monkeypatch.setattr("openbot.cli.commands.AgentLoop", _FakeAgentLoop)
+    monkeypatch.setattr("openbot.api.server.create_app", _fake_create_app)
     monkeypatch.setattr("aiohttp.web.run_app", _fake_run_app)
 
 
@@ -1193,19 +1193,19 @@ def test_gateway_cron_evaluator_receives_scheduled_reminder_context(
     bus.publish_outbound = AsyncMock()
     seen: dict[str, object] = {}
 
-    monkeypatch.setattr("nanobot.config.loader.set_config_path", lambda _path: None)
-    monkeypatch.setattr("nanobot.config.loader.load_config", lambda _path=None: config)
-    monkeypatch.setattr("nanobot.cli.commands.sync_workspace_templates", lambda _path: None)
-    monkeypatch.setattr("nanobot.providers.factory.make_provider", lambda _config: provider)
+    monkeypatch.setattr("openbot.config.loader.set_config_path", lambda _path: None)
+    monkeypatch.setattr("openbot.config.loader.load_config", lambda _path=None: config)
+    monkeypatch.setattr("openbot.cli.commands.sync_workspace_templates", lambda _path: None)
+    monkeypatch.setattr("openbot.providers.factory.make_provider", lambda _config: provider)
     monkeypatch.setattr(
-        "nanobot.providers.factory.build_provider_snapshot",
+        "openbot.providers.factory.build_provider_snapshot",
         lambda _config: _test_provider_snapshot(provider, _config),
     )
     monkeypatch.setattr(
-        "nanobot.providers.factory.load_provider_snapshot",
+        "openbot.providers.factory.load_provider_snapshot",
         lambda _config_path=None: _test_provider_snapshot(provider, config),
     )
-    monkeypatch.setattr("nanobot.bus.queue.MessageBus", lambda: bus)
+    monkeypatch.setattr("openbot.bus.queue.MessageBus", lambda: bus)
 
     class _FakeSession:
         def __init__(self) -> None:
@@ -1226,7 +1226,7 @@ def test_gateway_cron_evaluator_receives_scheduled_reminder_context(
         def save(self, session: _FakeSession) -> None:
             seen["saved_session"] = session
 
-    monkeypatch.setattr("nanobot.session.manager.SessionManager", _FakeSessionManager)
+    monkeypatch.setattr("openbot.session.manager.SessionManager", _FakeSessionManager)
 
     class _FakeCron:
         def __init__(self, _store_path: Path) -> None:
@@ -1275,11 +1275,11 @@ def test_gateway_cron_evaluator_receives_scheduled_reminder_context(
         seen["model"] = model
         return True
 
-    monkeypatch.setattr("nanobot.cron.service.CronService", _FakeCron)
-    monkeypatch.setattr("nanobot.cli.commands.AgentLoop", _FakeAgentLoop)
-    monkeypatch.setattr("nanobot.channels.manager.ChannelManager", _StopAfterCronSetup)
+    monkeypatch.setattr("openbot.cron.service.CronService", _FakeCron)
+    monkeypatch.setattr("openbot.cli.commands.AgentLoop", _FakeAgentLoop)
+    monkeypatch.setattr("openbot.channels.manager.ChannelManager", _StopAfterCronSetup)
     monkeypatch.setattr(
-        "nanobot.cli.commands.evaluate_response",
+        "openbot.cli.commands.evaluate_response",
         _capture_evaluate_response,
     )
 
@@ -1389,20 +1389,20 @@ def test_gateway_cron_job_suppresses_intermediate_progress(
     bus.publish_outbound = AsyncMock()
     seen: dict[str, object] = {}
 
-    monkeypatch.setattr("nanobot.config.loader.set_config_path", lambda _path: None)
-    monkeypatch.setattr("nanobot.config.loader.load_config", lambda _path=None: config)
-    monkeypatch.setattr("nanobot.cli.commands.sync_workspace_templates", lambda _path: None)
-    monkeypatch.setattr("nanobot.providers.factory.make_provider", lambda _config: _fake_provider())
+    monkeypatch.setattr("openbot.config.loader.set_config_path", lambda _path: None)
+    monkeypatch.setattr("openbot.config.loader.load_config", lambda _path=None: config)
+    monkeypatch.setattr("openbot.cli.commands.sync_workspace_templates", lambda _path: None)
+    monkeypatch.setattr("openbot.providers.factory.make_provider", lambda _config: _fake_provider())
     monkeypatch.setattr(
-        "nanobot.providers.factory.build_provider_snapshot",
+        "openbot.providers.factory.build_provider_snapshot",
         lambda _config: _test_provider_snapshot(object(), _config),
     )
     monkeypatch.setattr(
-        "nanobot.providers.factory.load_provider_snapshot",
+        "openbot.providers.factory.load_provider_snapshot",
         lambda _config_path=None: _test_provider_snapshot(object(), config),
     )
-    monkeypatch.setattr("nanobot.bus.queue.MessageBus", lambda: bus)
-    monkeypatch.setattr("nanobot.session.manager.SessionManager", lambda _workspace: object())
+    monkeypatch.setattr("openbot.bus.queue.MessageBus", lambda: bus)
+    monkeypatch.setattr("openbot.session.manager.SessionManager", lambda _workspace: object())
 
     class _FakeCron:
         def __init__(self, _store_path: Path) -> None:
@@ -1442,11 +1442,11 @@ def test_gateway_cron_job_suppresses_intermediate_progress(
     async def _always_reject(*_args, **_kwargs) -> bool:
         return False
 
-    monkeypatch.setattr("nanobot.cron.service.CronService", _FakeCron)
-    monkeypatch.setattr("nanobot.cli.commands.AgentLoop", _FakeAgentLoop)
-    monkeypatch.setattr("nanobot.channels.manager.ChannelManager", _StopAfterCronSetup)
+    monkeypatch.setattr("openbot.cron.service.CronService", _FakeCron)
+    monkeypatch.setattr("openbot.cli.commands.AgentLoop", _FakeAgentLoop)
+    monkeypatch.setattr("openbot.channels.manager.ChannelManager", _StopAfterCronSetup)
     monkeypatch.setattr(
-        "nanobot.cli.commands.evaluate_response",
+        "openbot.cli.commands.evaluate_response",
         _always_reject,
     )
 
@@ -1552,7 +1552,7 @@ def test_gateway_custom_config_workspace_does_not_migrate_legacy_cron(
 
 def test_migrate_cron_store_moves_legacy_file(tmp_path: Path) -> None:
     """Legacy global jobs.json is moved into the workspace on first run."""
-    from nanobot.cli.commands import _migrate_cron_store
+    from openbot.cli.commands import _migrate_cron_store
 
     legacy_dir = tmp_path / "global" / "cron"
     legacy_dir.mkdir(parents=True)
@@ -1563,7 +1563,7 @@ def test_migrate_cron_store_moves_legacy_file(tmp_path: Path) -> None:
     config.agents.defaults.workspace = str(tmp_path / "workspace")
     workspace_cron = config.workspace_path / "cron" / "jobs.json"
 
-    with patch("nanobot.config.paths.get_cron_dir", return_value=legacy_dir):
+    with patch("openbot.config.paths.get_cron_dir", return_value=legacy_dir):
         _migrate_cron_store(config)
 
     assert workspace_cron.exists()
@@ -1573,7 +1573,7 @@ def test_migrate_cron_store_moves_legacy_file(tmp_path: Path) -> None:
 
 def test_migrate_cron_store_skips_when_workspace_file_exists(tmp_path: Path) -> None:
     """Migration does not overwrite an existing workspace cron store."""
-    from nanobot.cli.commands import _migrate_cron_store
+    from openbot.cli.commands import _migrate_cron_store
 
     legacy_dir = tmp_path / "global" / "cron"
     legacy_dir.mkdir(parents=True)
@@ -1585,7 +1585,7 @@ def test_migrate_cron_store_skips_when_workspace_file_exists(tmp_path: Path) -> 
     workspace_cron.parent.mkdir(parents=True)
     workspace_cron.write_text('{"new": true}')
 
-    with patch("nanobot.config.paths.get_cron_dir", return_value=legacy_dir):
+    with patch("openbot.config.paths.get_cron_dir", return_value=legacy_dir):
         _migrate_cron_store(config)
 
     assert workspace_cron.read_text() == '{"new": true}'
@@ -1626,7 +1626,7 @@ def test_gateway_cli_port_overrides_configured_port(monkeypatch, tmp_path: Path)
 
 
 def test_configure_desktop_gateway_forces_local_websocket_only() -> None:
-    from nanobot.cli.commands import _configure_desktop_gateway
+    from openbot.cli.commands import _configure_desktop_gateway
 
     config = Config()
     config.channels.__pydantic_extra__ = {
@@ -1637,7 +1637,7 @@ def test_configure_desktop_gateway_forces_local_websocket_only() -> None:
     _configure_desktop_gateway(
         config,
         webui_port=29888,
-        webui_socket="/tmp/nanobot-test.sock",
+        webui_socket="/tmp/openbot-test.sock",
         token_issue_secret="secret",
     )
 
@@ -1649,13 +1649,13 @@ def test_configure_desktop_gateway_forces_local_websocket_only() -> None:
     assert extras["websocket"]["enabled"] is True
     assert extras["websocket"]["host"] == "127.0.0.1"
     assert extras["websocket"]["port"] == 29888
-    assert extras["websocket"]["unix_socket_path"] == "/tmp/nanobot-test.sock"
+    assert extras["websocket"]["unix_socket_path"] == "/tmp/openbot-test.sock"
     assert extras["websocket"]["token_issue_secret"] == "secret"
     assert extras["websocket"]["websocket_requires_token"] is True
 
 
 def test_load_or_create_desktop_config_bootstraps_without_api_key(tmp_path: Path) -> None:
-    from nanobot.cli.commands import _load_or_create_desktop_config
+    from openbot.cli.commands import _load_or_create_desktop_config
 
     config_path = tmp_path / "config.json"
     loaded = _load_or_create_desktop_config(
@@ -1676,8 +1676,8 @@ def test_load_or_create_desktop_config_bootstraps_without_api_key(tmp_path: Path
 def test_load_or_create_desktop_config_repairs_existing_unconfigured_default(
     tmp_path: Path,
 ) -> None:
-    from nanobot.cli.commands import _load_or_create_desktop_config
-    from nanobot.config.loader import save_config
+    from openbot.cli.commands import _load_or_create_desktop_config
+    from openbot.config.loader import save_config
 
     config_path = tmp_path / "config.json"
     save_config(Config(), config_path)
@@ -1695,8 +1695,8 @@ def test_load_or_create_desktop_config_repairs_existing_unconfigured_default(
 def test_load_or_create_desktop_config_unwinds_persisted_bootstrap(
     tmp_path: Path,
 ) -> None:
-    from nanobot.cli.commands import _load_or_create_desktop_config
-    from nanobot.config.loader import save_config
+    from openbot.cli.commands import _load_or_create_desktop_config
+    from openbot.config.loader import save_config
 
     config_path = tmp_path / "config.json"
     config = Config()
@@ -1815,9 +1815,9 @@ def test_gateway_health_endpoint_binds_and_serves_expected_responses(
         message_bus=lambda: object(),
         session_manager=lambda _workspace: object(),
     )
-    monkeypatch.setattr("nanobot.cli.commands.AgentLoop", _FakeAgentLoop)
-    monkeypatch.setattr("nanobot.channels.manager.ChannelManager", _FakeChannelManager)
-    monkeypatch.setattr("nanobot.cron.service.CronService", _FakeCronService)
+    monkeypatch.setattr("openbot.cli.commands.AgentLoop", _FakeAgentLoop)
+    monkeypatch.setattr("openbot.channels.manager.ChannelManager", _FakeChannelManager)
+    monkeypatch.setattr("openbot.cron.service.CronService", _FakeCronService)
     monkeypatch.setattr("asyncio.start_server", _fake_start_server)
 
     result = runner.invoke(app, ["gateway", "--config", str(config_file)])

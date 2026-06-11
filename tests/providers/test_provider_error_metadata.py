@@ -2,9 +2,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from nanobot.providers.anthropic_provider import AnthropicProvider
-from nanobot.providers.base import LLMProvider, LLMResponse
-from nanobot.providers.openai_compat_provider import OpenAICompatProvider
+from openbot.providers.anthropic_provider import AnthropicProvider
+from openbot.providers.base import LLMProvider, LLMResponse
+from openbot.providers.openai_compat_provider import OpenAICompatProvider
 
 
 def _fake_response(
