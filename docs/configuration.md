@@ -102,8 +102,7 @@ If a referenced variable is unset, openbot fails fast at startup with `ValueErro
   "tools": {
     "web": {
       "search": {
-        "provider": "brave",
-        "apiKey": "${BRAVE_API_KEY}"
+        "engines": ["bing", "sogou", "baidu", "360", "duckduckgo", "brave"]
       }
     }
   }
@@ -1440,163 +1439,56 @@ Keep whitelist entries as narrow as possible, such as a single host CIDR (`192.1
 
 ### Web Search
 
-openbot supports multiple web search providers. Configure in `~/.openbot/config.json` under `tools.web.search`.
+openbot uses a **concurrent multi-engine** web search architecture. It queries multiple free HTML scraping engines in parallel (no API key needed), deduplicates results, and returns the best matches.
 
-By default, web search uses `duckduckgo`, and it works out of the box without an API key.
+**Engine categories:**
 
-| Provider | Config fields | Env var fallback | Free |
-|----------|--------------|------------------|------|
-| `brave` | `apiKey` | `BRAVE_API_KEY` | No |
-| `tavily` | `apiKey` | `TAVILY_API_KEY` | No |
-| `jina` | `apiKey` | `JINA_API_KEY` | Free tier (10M tokens) |
-| `kagi` | `apiKey` | `KAGI_API_KEY` | No |
-| `olostep` | `apiKey` | `OLOSTEP_API_KEY` | No |
-| `bocha` | `apiKey` | `BOCHA_API_KEY` | Free tier (1M calls for startups) |
-| `volcengine` | `apiKey` | `VOLCENGINE_SEARCH_API_KEY` or `WEB_SEARCH_API_KEY` | Monthly quota, then paid |
-| `searxng` | `baseUrl` | `SEARXNG_BASE_URL` | Yes (self-hosted) |
-| `duckduckgo` (default) | — | — | Yes |
+| Category | Engines | Description |
+|----------|---------|-------------|
+| `web` (default) | Bing, Sogou, Baidu, 360, DuckDuckGo, Brave | General web search across 6 engines |
+| `news` | Bing News + 15 RSS feeds | News aggregation (36kr, HackerNews, TechCrunch, etc.) |
+| `academic` | ArXiv + CrossRef | Academic paper search via public APIs |
+| `github` | GitHub API | Code & repository search |
+| `all` | All above | Runs every engine (web + news + academic + github) |
 
-**Brave:**
+**Timeout strategy:** Each engine has a 2s individual timeout. The total search has a 5s timeout. Engines that exceed their timeout are discarded; results from faster engines are still returned.
+
+**Default config** (all engines enabled):
 ```json
 {
   "tools": {
     "web": {
       "search": {
-        "provider": "brave",
-        "apiKey": "${BRAVE_API_KEY}"
+        "maxResults": 5,
+        "engines": ["bing", "sogou", "baidu", "360", "duckduckgo", "brave"]
       }
     }
   }
 }
 ```
 
-**Tavily:**
+**Use fewer engines** (e.g., only Bing + DuckDuckGo):
 ```json
 {
   "tools": {
     "web": {
       "search": {
-        "provider": "tavily",
-        "apiKey": "${TAVILY_API_KEY}"
+        "maxResults": 5,
+        "engines": ["bing", "duckduckgo"]
       }
     }
   }
 }
 ```
 
-**Jina** (free tier with 10M tokens):
-```json
-{
-  "tools": {
-    "web": {
-      "search": {
-        "provider": "jina",
-        "apiKey": "${JINA_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-**Kagi:**
-```json
-{
-  "tools": {
-    "web": {
-      "search": {
-        "provider": "kagi",
-        "apiKey": "${KAGI_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-**Olostep:**
-```json
-{
-  "tools": {
-    "web": {
-      "search": {
-        "provider": "olostep",
-        "apiKey": "${OLOSTEP_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-You can also set `OLOSTEP_API_KEY` in the environment instead of storing it in config.
-
-**Bocha** (AI-optimized search, free tier available):
-```json
-{
-  "tools": {
-    "web": {
-      "search": {
-        "provider": "bocha",
-        "apiKey": "${BOCHA_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-Create your API key at [open.bochaai.com](https://open.bochaai.com).
-Bocha returns structured results optimized for AI consumption, with optional summaries.
-You can set `BOCHA_API_KEY` in the environment instead of storing it in config.
-
-**Volcengine Search:**
-```json
-{
-  "tools": {
-    "web": {
-      "search": {
-        "provider": "volcengine",
-        "apiKey": "${VOLCENGINE_SEARCH_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-You can also set `WEB_SEARCH_API_KEY` for compatibility with the Volcengine web-search skill. Create the key in the [Volcengine web search console](https://console.volcengine.com/search-infinity/web-search), then copy it from [API keys](https://console.volcengine.com/search-infinity/api-key). Volcengine Ark keys are separate and do not work for this search provider.
-
-**SearXNG** (self-hosted, no API key needed):
-```json
-{
-  "tools": {
-    "web": {
-      "search": {
-        "provider": "searxng",
-        "baseUrl": "https://searx.example"
-      }
-    }
-  }
-}
-```
-
-**DuckDuckGo** (zero config):
-```json
-{
-  "tools": {
-    "web": {
-      "search": {
-        "provider": "duckduckgo"
-      }
-    }
-  }
-}
-```
+The LLM can also pass a `category` parameter to `web_search` to target specific engine groups (e.g., `news`, `academic`, `github`, or `all`).
 
 #### `tools.web.search`
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `provider` | string | `"duckduckgo"` | Search backend: `brave`, `tavily`, `jina`, `kagi`, `olostep`, `bocha`, `volcengine`, `searxng`, `duckduckgo` |
-| `apiKey` | string | `""` | API key for API-backed search providers |
-| `baseUrl` | string | `""` | Base URL for SearXNG |
 | `maxResults` | integer | `5` | Results per search (1–10) |
+| `engines` | list of strings | `["bing","sogou","baidu","360","duckduckgo","brave"]` | Which engines to use for `web` category searches |
 
 ### Web Fetch
 
