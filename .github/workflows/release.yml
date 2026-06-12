@@ -33,7 +33,7 @@ jobs:
       - name: Build wheel and sdist
         run: uv run --with build python -m build
         env:
-          OPENBOT_SKIP_WEBUI_BUILD: "1"
+          openbot_SKIP_WEBUI_BUILD: "1"
 
       - name: Verify package metadata
         run: uvx twine check dist/*
