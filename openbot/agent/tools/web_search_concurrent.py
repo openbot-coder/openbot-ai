@@ -78,6 +78,7 @@ _ENGINE_URL_TEMPLATES: dict[str, str] = {
     "news": "https://cn.bing.com/news/search?q={q}",
     "academic": "https://export.arxiv.org/api/query?search_query=all:{q}",
     "github": "https://api.github.com/search/repositories?q={q}",
+    "wechat": "https://weixin.sogou.com/weixin?type=2&query={q}",
 }
 
 
@@ -94,6 +95,7 @@ def _build_engine_instances(timeout: float = 10.0, proxy: str | None = None) -> 
         NewsSearch,
         Search360Scraper,
         SogouScraper,
+        WeChatSearch,
     )
 
     return {
@@ -107,6 +109,7 @@ def _build_engine_instances(timeout: float = 10.0, proxy: str | None = None) -> 
         "news": NewsSearch(timeout=timeout, proxy=proxy),
         "academic": AcademicSearch(timeout=timeout, proxy=proxy),
         "github": GitHubEngine(timeout=timeout, proxy=proxy),
+        "wechat": WeChatSearch(timeout=timeout, proxy=proxy),
     }
 
 
@@ -120,9 +123,10 @@ ENGINE_GROUPS: dict[str, list[str]] = {
     "news": ["news"],
     "academic": ["academic"],
     "github": ["github"],
+    "wechat": ["wechat"],                     # WeChat public account articles
     "all": [
         "bing", "sogou", "baidu", "360", "duckduckgo", "brave",
-        "ddgs", "news", "academic", "github",
+        "ddgs", "news", "academic", "github", "wechat",
     ],
 }
 

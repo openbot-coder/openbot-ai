@@ -9,6 +9,7 @@ Provides:
   - News: NewsSearch (BingNews + RSS feeds)
   - Academic: AcademicSearch (ArXiv + CrossRef)
   - Code: GitHubEngine
+  - WeChat: WeChatSearch (Sogou WeChat public account articles)
 """
 
 from openbot.agent.tools.web_engines.academic_engine import AcademicSearch
@@ -21,6 +22,7 @@ from openbot.agent.tools.web_engines.news_engine import NewsSearch
 from openbot.agent.tools.web_engines.parser_engines import BraveParser, DuckDuckGoParser
 from openbot.agent.tools.web_engines.search360_scraper import Search360Scraper
 from openbot.agent.tools.web_engines.sogou_scraper import SogouScraper
+from openbot.agent.tools.web_engines.wechat_engine import WeChatSearch
 
 __all__ = [
     "BaseEngine",
@@ -35,4 +37,5 @@ __all__ = [
     "NewsSearch",
     "AcademicSearch",
     "GitHubEngine",
+    "WeChatSearch",
 ]
