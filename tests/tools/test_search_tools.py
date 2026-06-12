@@ -12,7 +12,7 @@ import pytest
 
 from openbot.agent.loop import AgentLoop
 from openbot.agent.subagent import SubagentManager, SubagentStatus
-from openbot.agent.tools.search import FindFilesTool, GrepTool
+from openbot.agent.tools.search import FindFilesTool, GrepTool, _PythonGrepBackend
 from openbot.agent.tools.web import WebSearchTool
 from openbot.bus.queue import MessageBus
 from openbot.config.schema import WebSearchConfig
@@ -283,7 +283,7 @@ async def test_grep_reports_skipped_binary_and_large_files(
     (tmp_path / "binary.bin").write_bytes(b"\x00\x01\x02")
     (tmp_path / "large.txt").write_text("x" * 20, encoding="utf-8")
 
-    monkeypatch.setattr(GrepTool, "_MAX_FILE_BYTES", 10)
+    monkeypatch.setattr(_PythonGrepBackend, "_MAX_FILE_BYTES", 10)
     tool = GrepTool(workspace=tmp_path, allowed_dir=tmp_path)
     result = await tool.execute(pattern="needle", path=".")
 
