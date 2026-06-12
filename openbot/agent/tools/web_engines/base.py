@@ -50,8 +50,9 @@ class BaseEngine(ABC):
     name: str = "unknown"
     timeout: float = 15.0
 
-    def __init__(self, timeout: float = 15.0):
+    def __init__(self, timeout: float = 15.0, proxy: str | None = None):
         self.timeout = timeout
+        self.proxy = proxy
 
     @abstractmethod
     async def search(self, query: str, max_results: int = 10,

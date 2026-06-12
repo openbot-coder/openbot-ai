@@ -37,6 +37,8 @@ class WebSearchConfig(Base):
             "bing", "sogou", "baidu", "360", "duckduckgo", "brave",
         ]
     )
+    engine_timeout: float = 2.0
+    total_timeout: float = 5.0
 
 
 class WebFetchConfig(Base):
@@ -213,15 +215,24 @@ class WebSearchTool(Tool):
         return cls(
             max_results=ctx.config.web.search.max_results,
             engines=ctx.config.web.search.engines,
+            engine_timeout=ctx.config.web.search.engine_timeout,
+            total_timeout=ctx.config.web.search.total_timeout,
+            proxy=ctx.config.web.proxy,
         )
 
     def __init__(
         self,
         max_results: int = 5,
         engines: list[str] | None = None,
+        engine_timeout: float = 2.0,
+        total_timeout: float = 5.0,
+        proxy: str | None = None,
     ):
         self.max_results = max_results
         self.engines = engines
+        self.engine_timeout = engine_timeout
+        self.total_timeout = total_timeout
+        self.proxy = proxy
 
     @property
     def read_only(self) -> bool:
@@ -252,8 +263,9 @@ class WebSearchTool(Tool):
             category=category or "web",
             engines=self.engines if (category or "web") == "web" else None,
             max_results=n,
-            engine_timeout=2.0,
-            total_timeout=5.0,
+            engine_timeout=self.engine_timeout,
+            total_timeout=self.total_timeout,
+            proxy=self.proxy,
         )
         return format_concurrent_results(query, items, stats, max_display=n)
 

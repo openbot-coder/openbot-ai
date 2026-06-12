@@ -29,7 +29,7 @@ class ArxivEngine(BaseEngine):
         )
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
                 resp = await client.get(url)
                 resp.raise_for_status()
             elapsed = time.time() - t0
@@ -85,7 +85,7 @@ class CrossRefEngine(BaseEngine):
         headers = {"User-Agent": "openbot/1.0 (mailto:search@example.com)"}
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
                 resp = await client.get(url, params=params, headers=headers)
                 resp.raise_for_status()
             elapsed = time.time() - t0
@@ -133,8 +133,8 @@ class AcademicSearch(BaseEngine):
     async def search(self, query: str, max_results: int = 10,
                      **kwargs) -> list[SearchResult]:
         import asyncio
-        arxiv = ArxivEngine(timeout=self.timeout)
-        crossref = CrossRefEngine(timeout=self.timeout)
+        arxiv = ArxivEngine(timeout=self.timeout, proxy=self.proxy)
+        crossref = CrossRefEngine(timeout=self.timeout, proxy=self.proxy)
 
         arxiv_results, crossref_results = await asyncio.gather(
             arxiv.search(query, max_results=max_results),

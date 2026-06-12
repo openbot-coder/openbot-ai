@@ -34,7 +34,7 @@ class BingScraper(BaseEngine):
             url = f"https://www.bing.com/search?q={quote_plus(query)}"
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
                 resp = await client.get(url, headers=HEADERS)
                 resp.raise_for_status()
             elapsed = time.time() - t0

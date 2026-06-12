@@ -28,8 +28,9 @@ def _make_result(title="Test", url="https://example.com", snippet="desc",
                         source=source, category=category)
 
 
-def _tool(engines=None, max_results=5) -> WebSearchTool:
-    return WebSearchTool(max_results=max_results, engines=engines)
+def _tool(engines=None, max_results=5, engine_timeout=2.0, total_timeout=5.0) -> WebSearchTool:
+    return WebSearchTool(max_results=max_results, engines=engines,
+                         engine_timeout=engine_timeout, total_timeout=total_timeout)
 
 
 # ---------------------------------------------------------------------------
@@ -43,6 +44,8 @@ def test_tool_defaults():
     assert tool.read_only is True
     assert tool.exclusive is False
     assert tool.concurrency_safe is True
+    assert tool.engine_timeout == 2.0
+    assert tool.total_timeout == 5.0
 
 
 def test_tool_custom_engines():
@@ -50,17 +53,27 @@ def test_tool_custom_engines():
     assert tool.engines == ["bing", "duckduckgo"]
 
 
+def test_tool_custom_timeout():
+    tool = _tool(engine_timeout=3.0, total_timeout=10.0)
+    assert tool.engine_timeout == 3.0
+    assert tool.total_timeout == 10.0
+
+
 def test_web_search_config_defaults():
     cfg = WebSearchConfig()
     assert cfg.max_results == 5
     assert "bing" in cfg.engines
     assert "duckduckgo" in cfg.engines
+    assert cfg.engine_timeout == 2.0
+    assert cfg.total_timeout == 5.0
 
 
 def test_web_search_config_custom():
-    cfg = WebSearchConfig(max_results=10, engines=["bing"])
+    cfg = WebSearchConfig(max_results=10, engines=["bing"], engine_timeout=3.0, total_timeout=10.0)
     assert cfg.max_results == 10
     assert cfg.engines == ["bing"]
+    assert cfg.engine_timeout == 3.0
+    assert cfg.total_timeout == 10.0
 
 
 # ---------------------------------------------------------------------------
@@ -313,6 +326,24 @@ async def test_execute_default():
         assert "Test" in result
         assert "https://test.com" in result
         mock_search.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_execute_passes_timeout_to_concurrent_search():
+    tool = _tool(engines=["bing"], engine_timeout=3.0, total_timeout=10.0)
+
+    with patch(
+        "openbot.agent.tools.web_search_concurrent.concurrent_search",
+        new_callable=AsyncMock,
+        return_value=(
+            [],
+            SearchStats(total_engines=1, succeeded=0, duration_ms=100),
+        ),
+    ) as mock_search:
+        await tool.execute(query="test")
+        call_kwargs = mock_search.call_args.kwargs
+        assert call_kwargs["engine_timeout"] == 3.0
+        assert call_kwargs["total_timeout"] == 10.0
 
 
 @pytest.mark.asyncio

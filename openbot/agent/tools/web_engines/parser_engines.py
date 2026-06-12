@@ -33,7 +33,7 @@ class DuckDuckGoParser(BaseEngine):
         url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
                 resp = await client.get(url, headers=_HEADERS)
                 resp.raise_for_status()
             elapsed = time.time() - t0
@@ -76,7 +76,7 @@ class BraveParser(BaseEngine):
         url = f"https://search.brave.com/search?q={quote_plus(query)}&source=web"
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
                 resp = await client.get(url, headers=_HEADERS)
                 resp.raise_for_status()
             elapsed = time.time() - t0

@@ -30,7 +30,7 @@ class GitHubEngine(BaseEngine):
         params = {"q": query, "per_page": min(max_results, 30), "sort": "stars"}
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
                 resp = await client.get(endpoint, headers=HEADERS, params=params)
                 resp.raise_for_status()
             data = resp.json()

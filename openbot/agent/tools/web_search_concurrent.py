@@ -35,7 +35,7 @@ _ENGINE_URL_TEMPLATES: dict[str, str] = {
 }
 
 
-def _build_engine_instances(timeout: float = 10.0) -> dict[str, Any]:
+def _build_engine_instances(timeout: float = 10.0, proxy: str | None = None) -> dict[str, Any]:
     """Create one instance per engine.  Called once per search."""
     from openbot.agent.tools.web_engines import (
         AcademicSearch,
@@ -50,15 +50,15 @@ def _build_engine_instances(timeout: float = 10.0) -> dict[str, Any]:
     )
 
     return {
-        "bing": BingScraper(timeout=timeout),
-        "sogou": SogouScraper(timeout=timeout),
-        "baidu": BaiduScraper(timeout=timeout),
-        "360": Search360Scraper(timeout=timeout),
-        "duckduckgo": DuckDuckGoParser(timeout=timeout),
-        "brave": BraveParser(timeout=timeout),
-        "news": NewsSearch(timeout=timeout),
-        "academic": AcademicSearch(timeout=timeout),
-        "github": GitHubEngine(timeout=timeout),
+        "bing": BingScraper(timeout=timeout, proxy=proxy),
+        "sogou": SogouScraper(timeout=timeout, proxy=proxy),
+        "baidu": BaiduScraper(timeout=timeout, proxy=proxy),
+        "360": Search360Scraper(timeout=timeout, proxy=proxy),
+        "duckduckgo": DuckDuckGoParser(timeout=timeout, proxy=proxy),
+        "brave": BraveParser(timeout=timeout, proxy=proxy),
+        "news": NewsSearch(timeout=timeout, proxy=proxy),
+        "academic": AcademicSearch(timeout=timeout, proxy=proxy),
+        "github": GitHubEngine(timeout=timeout, proxy=proxy),
     }
 
 
@@ -141,7 +141,14 @@ async def _run_one_engine(
     max_results: int,
     engine_timeout: float,
 ) -> _EngineResult:
-    """Run a single engine with SSRF check + timeout."""
+    """Run a single engine with SSRF check + timeout.
+
+    Two layers of timeout:
+    - httpx inside each engine's ``search()`` enforces a soft timeout.
+    - ``asyncio.wait_for`` here enforces a hard timeout as a safety net,
+      because on Windows httpx's connect timeout can be unreliable when
+      DNS resolution hangs.
+    """
     t0 = time.monotonic()
 
     # SSRF pre-check
@@ -153,14 +160,15 @@ async def _run_one_engine(
             duration_ms=int((time.monotonic() - t0) * 1000),
         )
 
-    # Execute with per-engine timeout
+    # Execute — asyncio hard timeout (2x httpx) as safety net.
+    hard_timeout = engine_timeout * 2
     try:
         kwargs: dict[str, Any] = {"max_results": max_results}
         if engine_name == "bing":
             kwargs["region"] = "cn"
         results = await asyncio.wait_for(
             engine.search(query, **kwargs),
-            timeout=engine_timeout,
+            timeout=hard_timeout,
         )
         elapsed = int((time.monotonic() - t0) * 1000)
         return _EngineResult(
@@ -172,7 +180,7 @@ async def _run_one_engine(
         return _EngineResult(
             engine=engine_name,
             timed_out=True,
-            error=f"timeout after {engine_timeout}s",
+            error=f"timeout after {hard_timeout:.0f}s",
             duration_ms=int((time.monotonic() - t0) * 1000),
         )
     except Exception as exc:
@@ -211,6 +219,7 @@ async def concurrent_search(
     max_results: int = 5,
     engine_timeout: float = 2.0,
     total_timeout: float = 5.0,
+    proxy: str | None = None,
 ) -> tuple[list[dict[str, Any]], SearchStats]:
     """Run multiple search engines concurrently and merge results.
 
@@ -222,6 +231,7 @@ async def concurrent_search(
         max_results: Max results per engine.
         engine_timeout: Per-engine timeout in seconds.
         total_timeout: Overall timeout in seconds.
+        proxy: HTTP proxy URL (e.g. ``http://127.0.0.1:7890``).
 
     Returns:
         ``(items, stats)`` where *items* is a list of
@@ -235,52 +245,77 @@ async def concurrent_search(
     else:
         engine_names = engines
 
-    # Instantiate engines
-    all_engines = _build_engine_instances(timeout=engine_timeout + 2.0)
+    # Instantiate engines — httpx timeout inside each engine acts as a soft
+    # limit.  ``_run_one_engine`` wraps with ``asyncio.wait_for`` (2x) as a
+    # hard safety net because httpx's connect timeout can be unreliable on
+    # Windows when DNS resolution hangs.
+    all_engines = _build_engine_instances(timeout=engine_timeout, proxy=proxy)
 
     # Build tasks
-    tasks: dict[str, asyncio.Task[_EngineResult]] = {}
+    pending: dict[str, asyncio.Task[_EngineResult]] = {}
     for name in engine_names:
         eng = all_engines.get(name)
         if eng is None:
             logger.warning("Unknown engine: {}", name)
             continue
-        tasks[name] = asyncio.create_task(
+        pending[name] = asyncio.create_task(
             _run_one_engine(name, eng, query, max_results, engine_timeout)
         )
 
-    stats = SearchStats(total_engines=len(tasks))
+    stats = SearchStats(total_engines=len(pending))
 
-    # Run all tasks with total timeout
-    try:
-        results_map = await asyncio.wait_for(
-            asyncio.gather(*tasks.values(), return_exceptions=True),
-            timeout=total_timeout,
-        )
-    except asyncio.TimeoutError:
-        # Collect whatever finished so far
-        results_map = []
-        for name, task in tasks.items():
-            if task.done() and not task.cancelled():
-                try:
-                    results_map.append(task.result())
-                except Exception:
-                    results_map.append(_EngineResult(engine=name, error="total timeout"))
-            else:
+    # Run all tasks with total timeout using asyncio.wait.
+    # Unlike gather+wait_for, asyncio.wait properly tracks individual
+    # tasks and lets us cancel only the ones still running when time is up.
+    completed: dict[str, _EngineResult] = {}
+    deadline = time.monotonic() + total_timeout
+
+    while pending:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            for name, task in pending.items():
                 task.cancel()
-                results_map.append(_EngineResult(
+                completed[name] = _EngineResult(
                     engine=name, timed_out=True, error="total timeout",
-                ))
+                )
+            # Give cancelled tasks a brief window to finish cleanup,
+            # but don't block — on Windows httpx's __aexit__ can hang
+            # when the connection was never established.
+            if pending:
+                drain, _ = await asyncio.wait(
+                    list(pending.values()), timeout=0.5,
+                )
+                for t in drain:
+                    try:
+                        t.result()
+                    except (asyncio.CancelledError, Exception):
+                        pass
+            break
+
+        done, _ = await asyncio.wait(
+            list(pending.values()),
+            timeout=remaining,
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+
+        # Map completed tasks back to engine names and remove from pending.
+        for task in done:
+            for name, t in list(pending.items()):
+                if t is task:
+                    try:
+                        result = task.result()
+                    except Exception as exc:
+                        result = _EngineResult(engine=name, error=str(exc))
+                    completed[name] = result
+                    del pending[name]
+                    break
 
     # Collect results
     all_items: list[dict[str, Any]] = []
-    for name, raw in zip(tasks.keys(), results_map):
-        if isinstance(raw, Exception):
-            er = _EngineResult(engine=name, error=str(raw))
-        elif isinstance(raw, _EngineResult):
-            er = raw
-        else:
-            er = _EngineResult(engine=name, error="unexpected result type")
+    for name in engine_names:
+        er = completed.get(name)
+        if er is None:
+            er = _EngineResult(engine=name, error="not started")
 
         stats.per_engine[name] = {
             "duration_ms": er.duration_ms,

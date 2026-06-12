@@ -32,7 +32,7 @@ class BaiduScraper(BaseEngine):
         url = f"https://www.baidu.com/s?wd={quote_plus(query)}&rn={max_results}"
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
                 resp = await client.get(url, headers=HEADERS)
                 resp.raise_for_status()
             elapsed = time.time() - t0

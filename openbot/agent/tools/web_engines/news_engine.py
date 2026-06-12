@@ -55,7 +55,7 @@ class BingNewsEngine(BaseEngine):
         url = f"https://{base}/news/search?q={quote_plus(query)}&setlang=zh-CN"
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
                 resp = await client.get(url, headers=_HEADERS)
                 resp.raise_for_status()
             elapsed = time.time() - t0
@@ -113,7 +113,7 @@ class RSSNewsEngine(BaseEngine):
 
     async def _fetch_feed(self, name: str, url: str, query: str) -> list[SearchResult]:
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
                 resp = await client.get(url, headers=_HEADERS)
                 resp.raise_for_status()
             return self._parse_feed(name, resp.text, query)
@@ -168,8 +168,8 @@ class NewsSearch(BaseEngine):
     async def search(self, query: str, max_results: int = 10,
                      region: str = "cn", **kwargs) -> list[SearchResult]:
         import asyncio
-        bing = BingNewsEngine(timeout=self.timeout)
-        rss = RSSNewsEngine(timeout=8.0)
+        bing = BingNewsEngine(timeout=self.timeout, proxy=self.proxy)
+        rss = RSSNewsEngine(timeout=self.timeout, proxy=self.proxy)
 
         bing_results, rss_results = await asyncio.gather(
             bing.search(query, max_results=max_results, region=region),
