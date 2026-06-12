@@ -31,7 +31,7 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Build wheel and sdist
-        run: uv run python -m build
+        run: uv run --with build python -m build
         env:
           OPENBOT_SKIP_WEBUI_BUILD: "1"
 
