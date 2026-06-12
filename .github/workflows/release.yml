@@ -44,7 +44,7 @@ jobs:
           name: dist
           path: dist/
 
-  # ── Publish to PyPI ─────────────────────────────────────────────────
+  # ── Publish to PyPI (via twine, bypasses pypa action OIDC bug) ──────
   publish-pypi:
     runs-on: ubuntu-latest
     needs: build
@@ -57,7 +57,7 @@ jobs:
           path: dist/
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          oidc: false
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: uvx twine upload dist/* --non-interactive --verbose
