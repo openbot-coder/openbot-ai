@@ -176,6 +176,15 @@ async def _run_one_engine(
             results=results or [],
             duration_ms=elapsed,
         )
+    except asyncio.CancelledError:
+        # Convert propagated cancellation into a timed_out result so the
+        # outer gather() can collect it without aborting the whole search.
+        return _EngineResult(
+            engine=engine_name,
+            timed_out=True,
+            error="cancelled",
+            duration_ms=int((time.monotonic() - t0) * 1000),
+        )
     except asyncio.TimeoutError:
         return _EngineResult(
             engine=engine_name,
@@ -189,6 +198,19 @@ async def _run_one_engine(
             error=str(exc),
             duration_ms=int((time.monotonic() - t0) * 1000),
         )
+
+
+def _raise_if_cancelled(results: list[Any]) -> None:
+    """Re-raise CancelledError if any sub-task was cancelled.
+
+    ``asyncio.gather(return_exceptions=True)`` swallows CancelledError into
+    the result list rather than propagating it.  This helper walks the list
+    and re-raises the first CancelledError it finds, so that the outer
+    ``asyncio.wait_for`` can terminate cleanly.
+    """
+    for r in results:
+        if isinstance(r, asyncio.CancelledError):
+            raise r
 
 
 def _normalize_url(url: str) -> str:

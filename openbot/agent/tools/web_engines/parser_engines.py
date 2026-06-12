@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from urllib.parse import quote_plus
 
-import httpx
 from bs4 import BeautifulSoup
 
 from openbot.agent.tools.web_engines.base import BaseEngine, SearchResult
@@ -13,9 +13,6 @@ from openbot.agent.tools.web_engines.base import BaseEngine, SearchResult
 logger = logging.getLogger(__name__)
 
 _HEADERS = {
-    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                   "AppleWebKit/537.36 (KHTML, like Gecko) "
-                   "Chrome/125.0.0.0 Safari/537.36"),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
 }
@@ -33,16 +30,18 @@ class DuckDuckGoParser(BaseEngine):
         url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
-                resp = await client.get(url, headers=_HEADERS)
-                resp.raise_for_status()
-            elapsed = time.time() - t0
-            results = self._parse(resp.text, max_results)
-            logger.info("[duckduckgo] %d results in %.2fs", len(results), elapsed)
-            return results
+            resp = await self._fetch(url, headers=_HEADERS)
+            resp.raise_for_status()
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.warning("[duckduckgo] failed: %s", e)
             return []
+
+        elapsed = time.time() - t0
+        results = self._parse(resp.text, max_results)
+        logger.info("[duckduckgo] %d results in %.2fs", len(results), elapsed)
+        return results
 
     def _parse(self, html: str, max_results: int) -> list[SearchResult]:
         soup = BeautifulSoup(html, "html.parser")
@@ -76,16 +75,18 @@ class BraveParser(BaseEngine):
         url = f"https://search.brave.com/search?q={quote_plus(query)}&source=web"
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
-                resp = await client.get(url, headers=_HEADERS)
-                resp.raise_for_status()
-            elapsed = time.time() - t0
-            results = self._parse(resp.text, max_results)
-            logger.info("[brave] %d results in %.2fs", len(results), elapsed)
-            return results
+            resp = await self._fetch(url, headers=_HEADERS)
+            resp.raise_for_status()
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.warning("[brave] failed: %s", e)
             return []
+
+        elapsed = time.time() - t0
+        results = self._parse(resp.text, max_results)
+        logger.info("[brave] %d results in %.2fs", len(results), elapsed)
+        return results
 
     def _parse(self, html: str, max_results: int) -> list[SearchResult]:
         soup = BeautifulSoup(html, "html.parser")

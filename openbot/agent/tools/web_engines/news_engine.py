@@ -2,21 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
 from urllib.parse import quote_plus
 from xml.etree import ElementTree as ET
 
-import httpx
-
 from openbot.agent.tools.web_engines.base import BaseEngine, SearchResult
 
 logger = logging.getLogger(__name__)
 
 _HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                  "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
 }
 
@@ -55,16 +52,18 @@ class BingNewsEngine(BaseEngine):
         url = f"https://{base}/news/search?q={quote_plus(query)}&setlang=zh-CN"
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
-                resp = await client.get(url, headers=_HEADERS)
-                resp.raise_for_status()
-            elapsed = time.time() - t0
-            results = self._parse(resp.text, max_results)
-            logger.info("[bing_news] %d results in %.2fs", len(results), elapsed)
-            return results
+            resp = await self._fetch(url, headers=_HEADERS)
+            resp.raise_for_status()
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.warning("[bing_news] failed: %s", e)
             return []
+
+        elapsed = time.time() - t0
+        results = self._parse(resp.text, max_results)
+        logger.info("[bing_news] %d results in %.2fs", len(results), elapsed)
+        return results
 
     def _parse(self, html: str, max_results: int) -> list[SearchResult]:
         from bs4 import BeautifulSoup
@@ -98,10 +97,17 @@ class RSSNewsEngine(BaseEngine):
         t0 = time.time()
         all_results = []
 
-        import asyncio
+        # Each feed gets its own timeout wrapper so a single slow feed cannot
+        # blow past the engine's allotted budget.  ``asyncio.wait_for`` here
+        # is enforced even for the inner sub-tasks so cancellation from the
+        # outer ``concurrent_search()`` propagates all the way down.
         tasks = [self._fetch_feed(name, url, query)
                  for name, url in _RSS_FEEDS.items()]
         feeds = await asyncio.gather(*tasks, return_exceptions=True)
+        # gather(return_exceptions=True) swallows CancelledError — re-raise
+        # explicitly so the orchestrator's wait_for can terminate cleanly.
+        from openbot.agent.tools.web_search_concurrent import _raise_if_cancelled
+        _raise_if_cancelled(feeds)
 
         for feed_results in feeds:
             if isinstance(feed_results, list):
@@ -113,10 +119,11 @@ class RSSNewsEngine(BaseEngine):
 
     async def _fetch_feed(self, name: str, url: str, query: str) -> list[SearchResult]:
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
-                resp = await client.get(url, headers=_HEADERS)
-                resp.raise_for_status()
+            resp = await self._fetch(url, headers=_HEADERS)
+            resp.raise_for_status()
             return self._parse_feed(name, resp.text, query)
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.warning("[rss_news:%s] failed: %s", name, e)
             return []
@@ -167,7 +174,6 @@ class NewsSearch(BaseEngine):
 
     async def search(self, query: str, max_results: int = 10,
                      region: str = "cn", **kwargs) -> list[SearchResult]:
-        import asyncio
         bing = BingNewsEngine(timeout=self.timeout, proxy=self.proxy)
         rss = RSSNewsEngine(timeout=self.timeout, proxy=self.proxy)
 
@@ -176,6 +182,10 @@ class NewsSearch(BaseEngine):
             rss.search(query, max_results=max_results),
             return_exceptions=True,
         )
+        # gather(return_exceptions=True) swallows CancelledError — re-raise
+        # explicitly so the orchestrator's wait_for can terminate cleanly.
+        from openbot.agent.tools.web_search_concurrent import _raise_if_cancelled
+        _raise_if_cancelled([bing_results, rss_results])
 
         all_results = []
         if isinstance(bing_results, list):

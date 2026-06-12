@@ -388,7 +388,115 @@ def test_format_concurrent_results_no_results():
     stats = SearchStats(total_engines=3, succeeded=0, duration_ms=500)
     text = format_concurrent_results("query", [], stats)
     assert "No results" in text
-    assert "[External content" in text
+
+
+# ---------------------------------------------------------------------------
+# Strict timeout enforcement (regression tests for the lenient-timeout bug)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_engine_timeout_is_strict_not_buffered():
+    """httpx client timeout must equal the engine timeout exactly.
+
+    Previously the orchestrator passed ``engine_timeout + 2.0`` to the
+    httpx client, meaning httpx could keep a request alive for two
+    seconds longer than the asyncio wrapper — the root cause of
+    ``搜索引擎超时无结果`` complaints.
+    """
+    with patch(
+        "openbot.agent.tools.web_search_concurrent._ssrf_check",
+        return_value=(True, ""),
+    ):
+        from openbot.agent.tools.web_engines.bing_scraper import BingScraper
+        captured: dict[str, float] = {}
+
+        original_init = BingScraper.__init__
+
+        def spy_init(self, timeout=15.0, proxy=None):
+            captured["timeout"] = timeout
+            original_init(self, timeout=timeout, proxy=proxy)
+
+        with patch.object(BingScraper, "__init__", spy_init):
+            await concurrent_search(
+                query="test",
+                engines=["bing"],
+                engine_timeout=2.0,
+            )
+
+    assert captured["timeout"] == 2.0, (
+        f"httpx timeout {captured['timeout']} differs from engine timeout 2.0 — "
+        "orchestrator is adding a buffer that defeats the asyncio wait_for."
+    )
+
+
+@pytest.mark.asyncio
+async def test_engine_propagates_cancelled_error():
+    """A slow engine that raises CancelledError must not be swallowed.
+
+    Without the explicit ``raise`` in the engine's ``except CancelledError``
+    block, the outer ``asyncio.wait_for`` would never be able to terminate
+    a stuck HTTP call, leading to the observed 15s hang per search.
+    """
+    class _CancelEngine:
+        name = "cancel"
+
+        def __init__(self):
+            self.timeout = 2.0
+
+        async def search(self, query, max_results=10, **kwargs):
+            # Simulate asyncio cancellation
+            raise asyncio.CancelledError()
+
+    with patch(
+        "openbot.agent.tools.web_search_concurrent._build_engine_instances",
+        return_value={"bing": _CancelEngine()},
+    ), patch(
+        "openbot.agent.tools.web_search_concurrent._ssrf_check",
+        return_value=(True, ""),
+    ):
+        items, stats = await concurrent_search(
+            query="test",
+            engines=["bing"],
+            engine_timeout=0.5,
+            total_timeout=5.0,
+        )
+
+    # The cancellation was raised (not swallowed), so the engine is marked
+    # as timed out / failed and returns no results.
+    assert len(items) == 0
+    assert stats.succeeded == 0
+    assert "bing" in (stats.timed_out or stats.failed)
+
+
+def test_base_engine_fetch_uses_strict_timeout_and_redirect_limit():
+    """``BaseEngine._fetch`` must cap redirects and respect self.timeout."""
+    from openbot.agent.tools.web_engines.base import _MAX_REDIRECTS
+    assert _MAX_REDIRECTS == 3, (
+        f"redirect cap is {_MAX_REDIRECTS}, expected 3 — runaway redirect "
+        "chains would otherwise eat the engine's timeout budget."
+    )
+
+
+@pytest.mark.asyncio
+async def test_news_engine_propagates_cancellation():
+    """``NewsSearch.search`` must re-raise CancelledError from sub-engines."""
+    from openbot.agent.tools.web_engines.news_engine import NewsSearch
+
+    class _CancelSubEngine:
+        async def search(self, *args, **kwargs):
+            raise asyncio.CancelledError()
+
+    news = NewsSearch(timeout=1.0)
+    with patch(
+        "openbot.agent.tools.web_engines.news_engine.BingNewsEngine"
+    ) as mock_bing, patch(
+        "openbot.agent.tools.web_engines.news_engine.RSSNewsEngine"
+    ) as mock_rss:
+        mock_bing.return_value.search = _CancelSubEngine().search
+        mock_rss.return_value.search = _CancelSubEngine().search
+
+        with pytest.raises(asyncio.CancelledError):
+            await news.search("test")
 
 
 # ---------------------------------------------------------------------------

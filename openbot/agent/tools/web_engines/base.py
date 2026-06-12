@@ -14,6 +14,20 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
+import httpx
+
+# Maximum number of HTTP redirects to follow per request.  Search engines
+# occasionally redirect through CDN nodes or anti-bot challenge pages, so we
+# allow a few, but cap to prevent runaway chains from exceeding timeouts.
+_MAX_REDIRECTS = 3
+
+# User-Agent used by every engine.  We pretend to be a regular Chrome so we
+# don't get served bot-detection pages.
+_DEFAULT_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+)
+
 
 @dataclass
 class SearchResult:
@@ -67,3 +81,37 @@ class BaseEngine(ABC):
             return {"name": self.name, "status": "ok", "count": len(results)}
         except Exception as e:
             return {"name": self.name, "status": "fail", "error": str(e)}
+
+    async def _fetch(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+    ) -> httpx.Response:
+        """HTTP GET with strict timeout + limited redirects.
+
+        Use this helper in subclasses instead of constructing your own
+        ``httpx.AsyncClient``.  It guarantees:
+
+        * The httpx timeout matches ``self.timeout`` exactly (no +2.0
+          buffer that would let httpx outlive the asyncio wrapper).
+        * At most ``_MAX_REDIRECTS`` redirects are followed.
+        * ``asyncio.CancelledError`` is NOT swallowed by the engine's
+          try/except — it always propagates so the outer ``wait_for`` can
+          terminate the search cleanly.
+
+        Raises:
+            httpx.TimeoutException: when the request exceeds ``self.timeout``.
+            asyncio.CancelledError: when the outer task is cancelled.
+        """
+        req_headers = {"User-Agent": _DEFAULT_UA, **(headers or {})}
+        # ``proxy=None`` forces httpx to bypass system env proxies, which on
+        # Windows can otherwise be picked up automatically and break SSL.
+        async with httpx.AsyncClient(
+            timeout=self.timeout,
+            proxy=self.proxy,
+            follow_redirects=True,
+            max_redirects=_MAX_REDIRECTS,
+        ) as client:
+            return await client.get(url, headers=req_headers, params=params)

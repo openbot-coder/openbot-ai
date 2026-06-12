@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from urllib.parse import quote_plus
 from xml.etree import ElementTree as ET
-
-import httpx
 
 from openbot.agent.tools.web_engines.base import BaseEngine, SearchResult
 
@@ -29,16 +28,18 @@ class ArxivEngine(BaseEngine):
         )
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
-                resp = await client.get(url)
-                resp.raise_for_status()
-            elapsed = time.time() - t0
-            results = self._parse_xml(resp.text, max_results)
-            logger.info("[arxiv] %d results in %.2fs", len(results), elapsed)
-            return results
+            resp = await self._fetch(url)
+            resp.raise_for_status()
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.warning("[arxiv] failed: %s", e)
             return []
+
+        elapsed = time.time() - t0
+        results = self._parse_xml(resp.text, max_results)
+        logger.info("[arxiv] %d results in %.2fs", len(results), elapsed)
+        return results
 
     def _parse_xml(self, xml_text: str, max_results: int) -> list[SearchResult]:
         try:
@@ -85,44 +86,46 @@ class CrossRefEngine(BaseEngine):
         headers = {"User-Agent": "openbot/1.0 (mailto:search@example.com)"}
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:
-                resp = await client.get(url, params=params, headers=headers)
-                resp.raise_for_status()
-            elapsed = time.time() - t0
-            data = resp.json()
-            results = []
-            for item in data.get("message", {}).get("items", [])[:max_results]:
-                title_list = item.get("title", [])
-                title = title_list[0] if title_list else ""
-                doi = item.get("DOI", "")
-                url_link = item.get("URL", f"https://doi.org/{doi}")
-                abstract = item.get("abstract", "")[:300]
-                pub_date = ""
-                if item.get("published-print"):
-                    dp = item["published-print"].get("date-parts", [[]])[0]
-                    pub_date = "-".join(str(p) for p in dp if p) if dp else ""
-
-                authors = [f"{a.get('given', '')} {a.get('family', '')}".strip()
-                           for a in item.get("author", [])]
-
-                if title:
-                    results.append(SearchResult(
-                        title=title, url=url_link, snippet=abstract,
-                        source="crossref", category="academic",
-                        published=pub_date,
-                        extra={
-                            "doi": doi,
-                            "authors": authors[:5],
-                            "journal": (item.get("container-title", [""])[0]
-                                        if item.get("container-title") else ""),
-                        },
-                    ))
-
-            logger.info("[crossref] %d results in %.2fs", len(results), elapsed)
-            return results
+            resp = await self._fetch(url, headers=headers, params=params)
+            resp.raise_for_status()
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             logger.warning("[crossref] failed: %s", e)
             return []
+
+        elapsed = time.time() - t0
+        data = resp.json()
+        results = []
+        for item in data.get("message", {}).get("items", [])[:max_results]:
+            title_list = item.get("title", [])
+            title = title_list[0] if title_list else ""
+            doi = item.get("DOI", "")
+            url_link = item.get("URL", f"https://doi.org/{doi}")
+            abstract = item.get("abstract", "")[:300]
+            pub_date = ""
+            if item.get("published-print"):
+                dp = item["published-print"].get("date-parts", [[]])[0]
+                pub_date = "-".join(str(p) for p in dp if p) if dp else ""
+
+            authors = [f"{a.get('given', '')} {a.get('family', '')}".strip()
+                       for a in item.get("author", [])]
+
+            if title:
+                results.append(SearchResult(
+                    title=title, url=url_link, snippet=abstract,
+                    source="crossref", category="academic",
+                    published=pub_date,
+                    extra={
+                        "doi": doi,
+                        "authors": authors[:5],
+                        "journal": (item.get("container-title", [""])[0]
+                                    if item.get("container-title") else ""),
+                    },
+                ))
+
+        logger.info("[crossref] %d results in %.2fs", len(results), elapsed)
+        return results
 
 
 class AcademicSearch(BaseEngine):
@@ -141,6 +144,10 @@ class AcademicSearch(BaseEngine):
             crossref.search(query, max_results=max_results),
             return_exceptions=True,
         )
+        # gather(return_exceptions=True) swallows CancelledError — re-raise
+        # explicitly so the orchestrator's wait_for can terminate cleanly.
+        from openbot.agent.tools.web_search_concurrent import _raise_if_cancelled
+        _raise_if_cancelled([arxiv_results, crossref_results])
 
         all_results = []
         if isinstance(arxiv_results, list):
