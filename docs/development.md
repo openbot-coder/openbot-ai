@@ -119,3 +119,59 @@ At minimum, cover:
 6. Update user-facing docs.
 
 Add the provider to [`configuration.md`](./configuration.md) where users choose `transcription.provider`, but keep implementation details in this development guide.
+
+## Adding a GrepTool Backend
+
+`openbot/agent/tools/search.py` uses a pluggable backend architecture for the `GrepTool`. The active backend is chosen at tool instantiation via `_select_backend()`:
+
+- **`_RipgrepBackend`** (preferred): wraps `rg --json` via `subprocess.run`. Used when `shutil.which("rg")` finds the binary.
+- **`_PythonGrepBackend`** (fallback): pure-Python implementation. Used when `rg` is not on `PATH`.
+
+Both backends implement the `_GrepBackend` Protocol:
+
+```python
+class _GrepBackend(Protocol):
+    name: str
+    def search(
+        self,
+        target: Path,
+        pattern: str | re.Pattern,
+        *,
+        case_insensitive: bool = True,
+        fixed_strings: bool = False,
+        output_mode: str = "content",
+        glob: str | None = None,
+        type_: str | None = None,
+        context_before: int = 0,
+        context_after: int = 0,
+    ) -> list[_Match]:
+        ...
+```
+
+The `_Match` dataclass carries one result:
+
+```python
+@dataclass
+class _Match:
+    file: Path
+    line_no: int
+    text: str
+    count: int
+    mtime: float
+    display_path: str
+```
+
+### Injecting a Custom Backend
+
+`GrepTool.__init__()` accepts a `backend=` keyword argument. This is useful for testing or swapping in a custom engine (e.g. `git grep`, `ag`):
+
+```python
+GrepTool(
+    workspace=ws,
+    backend=MyCustomBackend(name="my-engine"),
+)
+```
+
+### Writing Tests
+
+Backend-specific tests live in `tests/tools/test_ripgrep_backend.py`. Mock `subprocess.run` and `shutil.which` to simulate `rg` behavior without requiring the binary. Existing grep behavior is validated by `tests/tools/test_search_tools.py`, which exercises the Python fallback path.

@@ -120,6 +120,8 @@ See [`memory.md`](./memory.md) for the detailed design.
 Tools are discovered automatically from built-in modules and plugin entry points. Common tool groups include:
 
 - file read/write/edit and patching;
+- grep search with a pluggable ripgrep or Python backend;
+- file discovery by name, glob, or type;
 - shell execution with configurable sandboxing;
 - web search and web fetch with SSRF checks;
 - MCP servers;
