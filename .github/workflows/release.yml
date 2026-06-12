@@ -44,32 +44,10 @@ jobs:
           name: dist
           path: dist/
 
-  # ── Publish to Test PyPI (dry run) ──────────────────────────────────
-  publish-testpypi:
-    runs-on: ubuntu-latest
-    needs: build
-    timeout-minutes: 10
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/openbot-ai
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Publish to Test PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
-
-  # ── Publish to PyPI (API token) ───────────────────────────────────────
+  # ── Publish to PyPI ─────────────────────────────────────────────────
   publish-pypi:
     runs-on: ubuntu-latest
-    needs: publish-testpypi
+    needs: build
     timeout-minutes: 10
     steps:
       - name: Download build artifacts
@@ -82,22 +60,3 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
-
-  # ── GitHub Release assets ───────────────────────────────────────────
-  github-release:
-    runs-on: ubuntu-latest
-    needs: publish-pypi
-    permissions:
-      contents: write
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Upload assets to GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber
