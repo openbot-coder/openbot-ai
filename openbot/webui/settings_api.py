@@ -752,8 +752,9 @@ def settings_payload(
             "proxy": config.tools.web.proxy,
             "user_agent": config.tools.web.user_agent,
             "search": {
+                "enable": search_config.enable,
                 "max_results": search_config.max_results,
-                "timeout": search_config.timeout,
+                "timeout": search_config.engine_timeout,
             },
             "fetch": {
                 "use_jina_reader": config.tools.web.fetch.use_jina_reader,
@@ -1230,6 +1231,13 @@ def update_web_search_settings(query: QueryParams) -> dict[str, Any]:
             raise WebUISettingsError("api_key is required")
         set_search_value("api_key", api_key)
         set_search_value("base_url", "")
+
+    enable = _query_first_alias(query, "enable", "enabled")
+    if enable is not None:
+        normalized = enable.strip().lower()
+        if normalized not in {"1", "0", "true", "false", "yes", "no"}:
+            raise WebUISettingsError("enable must be boolean")
+        set_search_value("enable", normalized in {"1", "true", "yes"})
 
     max_results = _query_first_alias(query, "max_results", "maxResults")
     if max_results is not None:
