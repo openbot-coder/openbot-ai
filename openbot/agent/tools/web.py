@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import html
 import json
 import re
+import time
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
+import cachetools
 import primp
 from loguru import logger
 from pydantic import Field
@@ -42,7 +45,10 @@ class WebSearchConfig(Base):
 
 class WebFetchConfig(Base):
     """Web fetch tool configuration."""
-    pass  # Jina removed; kept for config compat
+    connect_timeout: float = 3.0  # 单请求连接超时（秒）
+    read_timeout: float = 2.0      # 单请求读取超时（秒，总5s内）
+    max_concurrency: int = 20      # 并发连接数
+    cache_ttl: int = 300           # 缓存 TTL（秒）
 
 
 class WebToolsConfig(Base):
@@ -282,6 +288,7 @@ class WebFetchTool(Tool):
         return cls(
             proxy=ctx.config.web.proxy,
             user_agent=ctx.config.web.user_agent,
+            config=ctx.config.web.fetch,
         )
 
     def __init__(
@@ -289,11 +296,16 @@ class WebFetchTool(Tool):
         proxy: str | None = None,
         user_agent: str | None = None,
         max_chars: int = 50000,
-        config: WebFetchConfig | None = None,  # accepted for backward compat; Jina removed
+        config: WebFetchConfig | None = None,
     ):
         self.proxy = proxy
         self.user_agent = user_agent or _DEFAULT_USER_AGENT
         self.max_chars = max_chars
+        self.config = config or WebFetchConfig()
+        # URL cache: key=url, value=(content, fetched_at)
+        self._url_cache: cachetools.TTLCache = cachetools.TTLCache(
+            maxsize=100, ttl=self.config.cache_ttl
+        )
         self._client: primp.AsyncClient | None = None
 
     @property
@@ -307,11 +319,20 @@ class WebFetchTool(Tool):
     async def _ensure_client(self) -> primp.AsyncClient:
         """Lazily create and reuse a single AsyncClient for connection pooling."""
         if self._client is None:
+            cfg = self.config
+            total_timeout = cfg.connect_timeout + cfg.read_timeout
             self._client = primp.AsyncClient(
                 proxy=self.proxy,
-                timeout=30.0,
+                timeout=total_timeout,
             )
         return self._client
+
+    @property
+    def _semaphore(self) -> asyncio.Semaphore:
+        """Semaphore to limit concurrent fetches."""
+        if not hasattr(self, "__sem"):
+            self.__sem = asyncio.Semaphore(self.config.max_concurrency)
+        return self.__sem
 
     async def close(self) -> None:
         """Close the shared client. Call from tool lifespan shutdown."""
@@ -334,63 +355,89 @@ class WebFetchTool(Tool):
         if not is_valid:
             return json.dumps({"error": f"URL validation failed: {error_msg}", "url": url}, ensure_ascii=False)
 
-        client = await self._ensure_client()
-        headers = {"User-Agent": self.user_agent}
-
-        r, redirect_error = await _fetch_with_safe_redirects(client, url, headers=headers, proxy=self.proxy)
-
-        if redirect_error:
-            return json.dumps({"error": redirect_error, "url": url}, ensure_ascii=False)
-        if r is None:
-            return json.dumps({"error": "Fetch failed", "url": url}, ensure_ascii=False)
-
-        try:
-            r.raise_for_status()
-            ctype = r.headers.get("content-type", "")
-
-            # Image — return as content block directly (no readability needed)
-            if ctype.startswith("image/"):
-                raw = await r.aread()
-                return build_image_content_blocks(raw, ctype, url, f"(Image fetched from: {url})")
-
-            # JSON
-            if "application/json" in ctype:
-                text, extractor = json.dumps(r.json(), indent=2, ensure_ascii=False), "json"
-            # HTML — use readability
-            elif "text/html" in ctype or r.text[:256].lower().startswith(("<!doctype", "<html")):
-                try:
-                    text = self._extract_readable_html(r.text, extract_mode)
-                    extractor = "readability"
-                except Exception as e:
-                    logger.warning("Readability failed for {}, using raw HTML fallback: {}", url, e)
-                    text, extractor = _normalize(_strip_tags(r.text)), "html"
-            # Raw text
-            else:
-                text, extractor = r.text, "raw"
-
-            truncated = len(text) > max_chars
-            if truncated:
-                text = text[:max_chars]
-            text = f"{_UNTRUSTED_BANNER}\n\n{text}"
-
+        # ① Cache hit — return cached result directly
+        cached = self._url_cache.get(url)
+        if cached is not None:
+            cached_text, cached_len = cached
             return json.dumps({
                 "url": url,
-                "finalUrl": str(r.url),
-                "status": r.status_code,
-                "extractor": extractor,
-                "truncated": truncated,
-                "length": len(text),
+                "finalUrl": url,
+                "status": 200,
+                "extractor": "cache",
+                "truncated": cached_len > max_chars,
+                "length": cached_len,
                 "untrusted": True,
-                "text": text,
+                "text": cached_text[:max_chars] if cached_len > max_chars else cached_text,
             }, ensure_ascii=False)
-        except primp.ConnectError as e:
-            logger.exception("WebFetch proxy error for {}", url)
-            return json.dumps({"error": f"Proxy error: {e}", "url": url}, ensure_ascii=False)
-        except Exception as e:
-            logger.exception("WebFetch error for {}", url)
-            return json.dumps({"error": str(e), "url": url}, ensure_ascii=False)
-        finally:
-            await r.aclose()
+
+        # ② Semaphore-bounded fetch
+        async with self._semaphore:
+            client = await self._ensure_client()
+            headers = {"User-Agent": self.user_agent}
+
+            r, redirect_error = await _fetch_with_safe_redirects(client, url, headers=headers, proxy=self.proxy)
+
+            if redirect_error:
+                return json.dumps({"error": redirect_error, "url": url}, ensure_ascii=False)
+            if r is None:
+                return json.dumps({"error": "Fetch failed", "url": url}, ensure_ascii=False)
+
+            try:
+                r.raise_for_status()
+                ctype = r.headers.get("content-type", "")
+
+                # Image — return as content block directly (no readability needed)
+                if ctype.startswith("image/"):
+                    raw = await r.aread()
+                    return build_image_content_blocks(raw, ctype, url, f"(Image fetched from: {url})")
+
+                # JSON
+                if "application/json" in ctype:
+                    text, extractor = json.dumps(r.json(), indent=2, ensure_ascii=False), "json"
+                # HTML — use readability with overall 5s timeout
+                elif "text/html" in ctype or r.text[:256].lower().startswith(("<!doctype", "<html")):
+                    try:
+                        text = await asyncio.wait_for(
+                            self._extract_readable_html_async(r.text, extract_mode),
+                            timeout=self.config.read_timeout,
+                        )
+                        extractor = "readability"
+                    except asyncio.TimeoutError:
+                        logger.warning("Readability timed out for {}, using raw HTML fallback", url)
+                        text, extractor = _normalize(_strip_tags(r.text)), "html"
+                    except Exception as e:
+                        logger.warning("Readability failed for {}, using raw HTML fallback: {}", url, e)
+                        text, extractor = _normalize(_strip_tags(r.text)), "html"
+                # Raw text
+                else:
+                    text, extractor = r.text, "raw"
+
+                truncated = len(text) > max_chars
+                if truncated:
+                    text = text[:max_chars]
+                text = f"{_UNTRUSTED_BANNER}\n\n{text}"
+
+                # ③ Cache the processed readable text (no banner) before returning
+                self._url_cache[url] = (text, len(text))
+
+                return json.dumps({
+                    "url": url,
+                    "finalUrl": str(r.url),
+                    "status": r.status_code,
+                    "extractor": extractor,
+                    "truncated": truncated,
+                    "length": len(text),
+                    "untrusted": True,
+                    "text": text,
+                }, ensure_ascii=False)
+            except primp.ConnectError as e:
+                logger.exception("WebFetch proxy error for {}", url)
+                return json.dumps({"error": f"Proxy error: {e}", "url": url}, ensure_ascii=False)
+            except Exception as e:
+                logger.exception("WebFetch error for {}", url)
+                return json.dumps({"error": str(e), "url": url}, ensure_ascii=False)
+            finally:
+                await r.aclose()
 
     def _extract_readable_html(self, html_content: str, extract_mode: str) -> str:
         from readability import Document
@@ -399,6 +446,10 @@ class WebFetchTool(Tool):
         summary = doc.summary()
         content = self._to_markdown(summary) if extract_mode == "markdown" else _strip_tags(summary)
         return f"# {doc.title()}\n\n{content}" if doc.title() else content
+
+    async def _extract_readable_html_async(self, html_content: str, extract_mode: str) -> str:
+        """Async wrapper — runs readability in a thread pool to avoid blocking."""
+        return await asyncio.to_thread(self._extract_readable_html, html_content, extract_mode)
 
     def _to_markdown(self, html_content: str) -> str:
         """Convert HTML to markdown."""
