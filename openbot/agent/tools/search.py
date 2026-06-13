@@ -10,6 +10,13 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, TypeVar
 
 from openbot.agent.tools.filesystem import ListDirTool, _FsTool
+from openbot.agent.tools.grep_backend import (
+    GrepMatch,
+    GrepResult,
+    PythonGrepBackend,
+    RipgrepBackend,
+)
+from openbot.security.workspace_policy import WorkspaceBoundaryError
 
 _DEFAULT_HEAD_LIMIT = 250
 _DEFAULT_FILE_HEAD_LIMIT = 200
@@ -51,32 +58,12 @@ def _match_glob(rel_path: str, name: str, pattern: str) -> bool:
     return fnmatch.fnmatch(name, normalized)
 
 
-def _is_binary(raw: bytes) -> bool:
-    if b"\x00" in raw:
-        return True
-    sample = raw[:4096]
-    if not sample:
-        return False
-    non_text = sum(byte < 9 or 13 < byte < 32 for byte in sample)
-    return (non_text / len(sample)) > 0.2
-
-
 def _paginate(items: list[T], limit: int | None, offset: int) -> tuple[list[T], bool]:
     if limit is None:
         return items[offset:], False
     sliced = items[offset : offset + limit]
     truncated = len(items) > offset + limit
     return sliced, truncated
-
-
-def _pagination_note(limit: int | None, offset: int, truncated: bool) -> str | None:
-    if truncated:
-        if limit is None:
-            return f"(pagination: offset={offset})"
-        return f"(pagination: limit={limit}, offset={offset})"
-    if offset > 0:
-        return f"(pagination: offset={offset})"
-    return None
 
 
 def _matches_type(name: str, file_type: str | None) -> bool:
@@ -163,21 +150,12 @@ class FindFilesTool(_SearchTool):
                 },
                 "type": {
                     "type": "string",
-                    "description": "Optional file type shorthand, e.g. 'py', 'ts', 'md', 'json'",
-                },
-                "include_dirs": {
-                    "type": "boolean",
-                    "description": "Include matching directories as well as files (default false)",
-                },
-                "sort": {
-                    "type": "string",
-                    "enum": ["path", "modified"],
-                    "description": "Sort by path or most recently modified first (default path)",
+                    "description": "Optional file type shorthand, e.g. 'py', 'ts', 'md'",
                 },
                 "head_limit": {
                     "type": "integer",
-                    "description": "Maximum number of paths to return (default 200, 0 for all, max 1000)",
-                    "minimum": 0,
+                    "description": "Maximum number of results to return (default 200)",
+                    "minimum": 1,
                     "maximum": 1000,
                 },
                 "offset": {
@@ -186,22 +164,18 @@ class FindFilesTool(_SearchTool):
                     "minimum": 0,
                     "maximum": 100000,
                 },
+                "include_dirs": {
+                    "type": "boolean",
+                    "description": "Include directories in results (default false)",
+                },
+                "sort": {
+                    "type": "string",
+                    "enum": ["name", "modified"],
+                    "description": "Sort order: 'name' (default) or 'modified' (mtime desc)",
+                },
             },
+            "required": [],
         }
-
-    def _iter_paths(self, root: Path, *, include_dirs: bool) -> Iterable[Path]:
-        if root.is_file():
-            yield root
-            return
-        if include_dirs:
-            yield root
-        for dirpath, dirnames, filenames in os.walk(root):
-            dirnames[:] = sorted(d for d in dirnames if d not in self._IGNORE_DIRS)
-            current = Path(dirpath)
-            if include_dirs and current != root:
-                yield current
-            for filename in sorted(filenames):
-                yield current / filename
 
     async def execute(
         self,
@@ -209,71 +183,90 @@ class FindFilesTool(_SearchTool):
         query: str | None = None,
         glob: str | None = None,
         type: str | None = None,
-        include_dirs: bool = False,
-        sort: str = "path",
-        head_limit: int | None = None,
+        head_limit: int | None = _DEFAULT_FILE_HEAD_LIMIT,
         offset: int = 0,
-        **kwargs: Any,
+        include_dirs: bool = False,
+        sort: str | None = None,
     ) -> str:
         try:
-            target = self._resolve(path or ".")
-            if not target.exists():
-                return f"Error: Path not found: {path}"
-            if not (target.is_dir() or target.is_file()):
-                return f"Error: Unsupported path: {path}"
+            target = self._resolve(path)
+        except WorkspaceBoundaryError as e:
+            return f"Error: {e}"
+        if not target.exists():
+            return f"Error: {target} does not exist"
+        if target.is_file():
+            return target.name
 
-            if sort not in {"path", "modified"}:
-                return "Error: sort must be 'path' or 'modified'"
+        entries: list[tuple[str, float]] = []
 
-            limit = (
-                _DEFAULT_FILE_HEAD_LIMIT
-                if head_limit is None
-                else None if head_limit == 0 else head_limit
-            )
-            root = target if target.is_dir() else target.parent
-            matches: list[tuple[str, float]] = []
-
-            for candidate in self._iter_paths(target, include_dirs=include_dirs):
-                if candidate.is_dir() and not include_dirs:
+        if include_dirs:
+            # Walk directories and files separately
+            for dirpath, dirnames, filenames in os.walk(target):
+                dirnames[:] = sorted(d for d in dirnames if d not in self._IGNORE_DIRS)
+                current = Path(dirpath)
+                # Add subdirectories
+                for dirname in dirnames:
+                    dir_entry = current / dirname
+                    rel_path = dir_entry.relative_to(target).as_posix() + "/"
+                    if not _matches_query(rel_path, query):
+                        continue
+                    try:
+                        mtime = dir_entry.stat().st_mtime
+                    except OSError:
+                        mtime = 0.0
+                    entries.append((self._display_path(dir_entry, target) + "/", mtime))
+                # Add files
+                for filename in sorted(filenames):
+                    file_path = current / filename
+                    rel_path = file_path.relative_to(target).as_posix()
+                    if not _matches_query(rel_path, query):
+                        continue
+                    if glob and not _match_glob(rel_path, filename, glob):
+                        continue
+                    if not _matches_type(filename, type):
+                        continue
+                    try:
+                        mtime = file_path.stat().st_mtime
+                    except OSError:
+                        mtime = 0.0
+                    entries.append((self._display_path(file_path, target), mtime))
+        else:
+            for file_path in self._iter_files(target):
+                rel_path = file_path.relative_to(target).as_posix()
+                name = file_path.name
+                if not _matches_query(rel_path, query):
                     continue
-                rel_path = candidate.relative_to(root).as_posix()
-                display_path = self._display_path(candidate, root)
-                name = candidate.name
-
                 if glob and not _match_glob(rel_path, name, glob):
                     continue
-                if candidate.is_file() and not _matches_type(name, type):
-                    continue
-                if candidate.is_dir() and type:
-                    continue
-                if not _matches_query(display_path, query):
+                if not _matches_type(name, type):
                     continue
                 try:
-                    mtime = candidate.stat().st_mtime
+                    mtime = file_path.stat().st_mtime
                 except OSError:
                     mtime = 0.0
-                suffix = "/" if candidate.is_dir() else ""
-                matches.append((display_path + suffix, mtime))
+                entries.append((self._display_path(file_path, target), mtime))
 
-            if sort == "modified":
-                matches.sort(key=lambda item: (-item[1], item[0]))
-            else:
-                matches.sort(key=lambda item: item[0])
+        # Sort
+        if sort == "modified":
+            entries.sort(key=lambda e: (-e[1], e[0]))
+        else:
+            entries.sort(key=lambda e: e[0])
 
-            paths = [item[0] for item in matches]
-            paged, truncated = _paginate(paths, limit, offset)
-            if not paged:
-                return "No files found"
+        matches = [e[0] for e in entries]
 
-            result = "\n".join(paged)
-            note = _pagination_note(limit, offset, truncated)
-            if note:
-                result += "\n\n" + note
-            return result
-        except PermissionError as e:
-            return f"Error: {e}"
-        except Exception as e:
-            return f"Error finding files: {e}"
+        if not matches:
+            return f"No files found matching criteria in {path}"
+
+        paged, truncated = _paginate(matches, head_limit, offset)
+        result = "\n".join(paged)
+        notes: list[str] = []
+        if truncated:
+            notes.append(f"(pagination: limit={head_limit}, offset={offset})")
+        elif offset > 0:
+            notes.append(f"(pagination: offset={offset})")
+        if notes:
+            result += "\n\n" + "\n".join(notes)
+        return result
 
 
 class GrepTool(_SearchTool):
@@ -282,6 +275,10 @@ class GrepTool(_SearchTool):
 
     _MAX_RESULT_CHARS = 128_000
     _MAX_FILE_BYTES = 2_000_000
+
+    # Backend singletons (created once)
+    _ripgrep_backend = RipgrepBackend()
+    _python_backend = PythonGrepBackend()
 
     @property
     def name(self) -> str:
@@ -355,17 +352,13 @@ class GrepTool(_SearchTool):
                 },
                 "max_matches": {
                     "type": "integer",
-                    "description": (
-                        "Legacy alias for head_limit in content mode"
-                    ),
+                    "description": "Legacy alias for head_limit in content mode",
                     "minimum": 1,
                     "maximum": 1000,
                 },
                 "max_results": {
                     "type": "integer",
-                    "description": (
-                        "Legacy alias for head_limit in files_with_matches or count mode"
-                    ),
+                    "description": "Legacy alias for head_limit in files_with_matches or count mode",
                     "minimum": 1,
                     "maximum": 1000,
                 },
@@ -405,6 +398,162 @@ class GrepTool(_SearchTool):
             block.append(f"{marker} {line_no}| {lines[line_no - 1]}")
         return "\n".join(block)
 
+    def _select_backend(self):
+        """Select the best available grep backend.
+
+        Use ripgrep when available, unless _MAX_FILE_BYTES has been
+        overridden (e.g. by tests), in which case fall back to Python
+        so skip counts and binary detection work as expected.
+        """
+        if self._MAX_FILE_BYTES != 2_000_000:
+            return self._python_backend
+        if self._ripgrep_backend.is_available():
+            return self._ripgrep_backend
+        return self._python_backend
+
+    def _workspace_rel(self, target: Path) -> str:
+        """Compute the relative prefix from workspace to target."""
+        workspace = self._display_workspace()
+        if workspace:
+            with suppress(ValueError):
+                return target.relative_to(workspace).as_posix()
+        return "."
+
+    def _prefix_path(self, rel: str, prefix: str) -> str:
+        """Prefix a backend-relative path with the workspace→target prefix."""
+        if not prefix or prefix == ".":
+            return rel
+        if rel == "." or rel == "./":
+            return prefix
+        return f"{prefix}/{rel}"
+
+    def _format_grep_result(
+        self,
+        pattern: str,
+        path: str,
+        output_mode: str,
+        gre: GrepResult,
+        context_before: int,
+        context_after: int,
+        limit: int | None,
+        offset: int,
+        path_prefix: str,
+    ) -> str:
+        """Format a GrepResult into the display string expected by the tool."""
+
+        def _pf(p: str) -> str:
+            return self._prefix_path(p, path_prefix)
+
+        def _append_skip_notes(base: str) -> str:
+            notes: list[str] = []
+            if gre.skipped_binary:
+                notes.append(f"(skipped {gre.skipped_binary} binary/unreadable files)")
+            if gre.skipped_large:
+                notes.append(f"(skipped {gre.skipped_large} large files)")
+            if notes:
+                base += "\n\n" + "\n".join(notes)
+            return base
+
+        if output_mode == "files_with_matches":
+            if not gre.matches:
+                return _append_skip_notes(f"No matches found for pattern '{pattern}' in {path}")
+            ordered = sorted(
+                gre.matches,
+                key=lambda m: (-gre.file_mtimes.get(m.path, 0.0), m.path),
+            )
+            paged, truncated = _paginate([_pf(m.path) for m in ordered], limit, offset)
+            result = "\n".join(paged)
+            notes: list[str] = []
+            if truncated:
+                notes.append(f"(pagination: limit={limit}, offset={offset})")
+            elif offset > 0:
+                notes.append(f"(pagination: offset={offset})")
+            if notes:
+                result += "\n\n" + "\n".join(notes)
+            return result
+
+        if output_mode == "count":
+            if not gre.counts:
+                return f"No matches found for pattern '{pattern}' in {path}"
+            ordered = sorted(
+                gre.counts.keys(),
+                key=lambda name: (-gre.file_mtimes.get(name, 0.0), name),
+            )
+            paged, truncated = _paginate(ordered, limit, offset)
+            lines = [f"{_pf(name)}: {gre.counts[name]}" for name in paged]
+            result = "\n".join(lines)
+            notes_count: list[str] = []
+            if truncated:
+                notes_count.append(f"(pagination: limit={limit}, offset={offset})")
+            elif offset > 0:
+                notes_count.append(f"(pagination: offset={offset})")
+            notes_count.append(
+                f"(total matches: {gre.total_matches} in {len(gre.counts)} files)"
+            )
+            result += "\n\n" + "\n".join(notes_count)
+            return result
+
+        # content mode
+        if not gre.matches:
+            return f"No matches found for pattern '{pattern}' in {path}"
+
+        blocks: list[str] = []
+        result_chars = 0
+        size_truncated = False
+
+        for m in gre.matches:
+            if m.line_number is None or m.line_text is None:
+                continue
+            display_path = _pf(m.path)
+            # Read file for context lines
+            file_path = Path(path) / m.path
+            if not file_path.exists():
+                file_path = self._resolve(m.path)
+            if file_path.exists():
+                try:
+                    raw = file_path.read_bytes()
+                    if len(raw) <= self._MAX_FILE_BYTES:
+                        file_lines = raw.decode("utf-8", errors="replace").splitlines()
+                    else:
+                        file_lines = [m.line_text]
+                except (OSError, PermissionError):
+                    file_lines = [m.line_text]
+            else:
+                file_lines = [m.line_text]
+
+            block = self._format_block(
+                display_path,
+                file_lines,
+                m.line_number,
+                context_before,
+                context_after,
+            )
+            extra_sep = 2 if blocks else 0
+            if result_chars + extra_sep + len(block) > self._MAX_RESULT_CHARS:
+                size_truncated = True
+                break
+            blocks.append(block)
+            result_chars += extra_sep + len(block)
+
+        if not blocks:
+            return f"No matches found for pattern '{pattern}' in {path}"
+
+        result = "\n\n".join(blocks)
+        notes_content: list[str] = []
+        if gre.truncated:
+            notes_content.append(f"(pagination: limit={limit}, offset={offset})")
+        elif size_truncated:
+            notes_content.append("(output truncated due to size)")
+        elif offset > 0:
+            notes_content.append(f"(pagination: offset={offset})")
+        if gre.skipped_binary:
+            notes_content.append(f"(skipped {gre.skipped_binary} binary/unreadable files)")
+        if gre.skipped_large:
+            notes_content.append(f"(skipped {gre.skipped_large} large files)")
+        if notes_content:
+            result += "\n\n" + "\n".join(notes_content)
+        return result
+
     async def execute(
         self,
         pattern: str,
@@ -420,164 +569,59 @@ class GrepTool(_SearchTool):
         max_results: int | None = None,
         head_limit: int | None = None,
         offset: int = 0,
-        **kwargs: Any,
     ) -> str:
         try:
-            target = self._resolve(path or ".")
+            target = self._resolve(path)
             if not target.exists():
-                return f"Error: Path not found: {path}"
-            if not (target.is_dir() or target.is_file()):
-                return f"Error: Unsupported path: {path}"
+                return f"Error: {target} does not exist"
 
-            flags = re.IGNORECASE if case_insensitive else 0
+            if head_limit is None:
+                if output_mode == "content":
+                    head_limit = max_matches
+                else:
+                    head_limit = max_results
+            if head_limit is None:
+                head_limit = _DEFAULT_HEAD_LIMIT
+
+            path_prefix = self._workspace_rel(target)
+
+            backend = self._select_backend()
+
             try:
-                needle = re.escape(pattern) if fixed_strings else pattern
-                regex = re.compile(needle, flags)
-            except re.error as e:
-                return f"Error: invalid regex pattern: {e}"
-
-            if head_limit is not None:
-                limit = None if head_limit == 0 else head_limit
-            elif output_mode == "content" and max_matches is not None:
-                limit = max_matches
-            elif output_mode != "content" and max_results is not None:
-                limit = max_results
-            else:
-                limit = _DEFAULT_HEAD_LIMIT
-            blocks: list[str] = []
-            result_chars = 0
-            seen_content_matches = 0
-            truncated = False
-            size_truncated = False
-            skipped_binary = 0
-            skipped_large = 0
-            matching_files: list[str] = []
-            counts: dict[str, int] = {}
-            file_mtimes: dict[str, float] = {}
-            root = target if target.is_dir() else target.parent
-
-            for file_path in self._iter_files(target):
-                rel_path = file_path.relative_to(root).as_posix()
-                if glob and not _match_glob(rel_path, file_path.name, glob):
-                    continue
-                if not _matches_type(file_path.name, type):
-                    continue
-
-                raw = file_path.read_bytes()
-                if len(raw) > self._MAX_FILE_BYTES:
-                    skipped_large += 1
-                    continue
-                if _is_binary(raw):
-                    skipped_binary += 1
-                    continue
-                try:
-                    mtime = file_path.stat().st_mtime
-                except OSError:
-                    mtime = 0.0
-                try:
-                    content = raw.decode("utf-8")
-                except UnicodeDecodeError:
-                    skipped_binary += 1
-                    continue
-
-                lines = content.splitlines()
-                display_path = self._display_path(file_path, root)
-                file_had_match = False
-                for idx, line in enumerate(lines, start=1):
-                    if not regex.search(line):
-                        continue
-                    file_had_match = True
-
-                    if output_mode == "count":
-                        counts[display_path] = counts.get(display_path, 0) + 1
-                        continue
-                    if output_mode == "files_with_matches":
-                        if display_path not in matching_files:
-                            matching_files.append(display_path)
-                            file_mtimes[display_path] = mtime
-                        break
-
-                    seen_content_matches += 1
-                    if seen_content_matches <= offset:
-                        continue
-                    if limit is not None and len(blocks) >= limit:
-                        truncated = True
-                        break
-                    block = self._format_block(
-                        display_path,
-                        lines,
-                        idx,
-                        context_before,
-                        context_after,
-                    )
-                    extra_sep = 2 if blocks else 0
-                    if result_chars + extra_sep + len(block) > self._MAX_RESULT_CHARS:
-                        size_truncated = True
-                        break
-                    blocks.append(block)
-                    result_chars += extra_sep + len(block)
-                if output_mode == "count" and file_had_match:
-                    if display_path not in matching_files:
-                        matching_files.append(display_path)
-                        file_mtimes[display_path] = mtime
-                if output_mode in {"count", "files_with_matches"} and file_had_match:
-                    continue
-                if truncated or size_truncated:
-                    break
-
-            if output_mode == "files_with_matches":
-                if not matching_files:
-                    result = f"No matches found for pattern '{pattern}' in {path}"
-                else:
-                    ordered_files = sorted(
-                        matching_files,
-                        key=lambda name: (-file_mtimes.get(name, 0.0), name),
-                    )
-                    paged, truncated = _paginate(ordered_files, limit, offset)
-                    result = "\n".join(paged)
-            elif output_mode == "count":
-                if not counts:
-                    result = f"No matches found for pattern '{pattern}' in {path}"
-                else:
-                    ordered_files = sorted(
-                        matching_files,
-                        key=lambda name: (-file_mtimes.get(name, 0.0), name),
-                    )
-                    ordered, truncated = _paginate(ordered_files, limit, offset)
-                    lines = [f"{name}: {counts[name]}" for name in ordered]
-                    result = "\n".join(lines)
-            else:
-                if not blocks:
-                    result = f"No matches found for pattern '{pattern}' in {path}"
-                else:
-                    result = "\n\n".join(blocks)
-
-            notes: list[str] = []
-            if output_mode == "content" and truncated:
-                notes.append(
-                    f"(pagination: limit={limit}, offset={offset})"
+                gre = backend.search(
+                    target,
+                    pattern,
+                    case_insensitive=case_insensitive,
+                    fixed_strings=fixed_strings,
+                    output_mode=output_mode,
+                    glob=glob,
+                    type_=type,
+                    head_limit=head_limit,
+                    offset=offset,
+                    max_file_size=self._MAX_FILE_BYTES,
                 )
-            elif output_mode == "content" and size_truncated:
-                notes.append("(output truncated due to size)")
-            elif truncated and output_mode in {"count", "files_with_matches"}:
-                notes.append(
-                    f"(pagination: limit={limit}, offset={offset})"
-                )
-            elif output_mode in {"count", "files_with_matches"} and offset > 0:
-                notes.append(f"(pagination: offset={offset})")
-            elif output_mode == "content" and offset > 0 and blocks:
-                notes.append(f"(pagination: offset={offset})")
-            if skipped_binary:
-                notes.append(f"(skipped {skipped_binary} binary/unreadable files)")
-            if skipped_large:
-                notes.append(f"(skipped {skipped_large} large files)")
-            if output_mode == "count" and counts:
-                notes.append(
-                    f"(total matches: {sum(counts.values())} in {len(counts)} files)"
-                )
-            if notes:
-                result += "\n\n" + "\n".join(notes)
-            return result
+            except FileNotFoundError:
+                if backend is not self._python_backend:
+                    gre = self._python_backend.search(
+                        target,
+                        pattern,
+                        case_insensitive=case_insensitive,
+                        fixed_strings=fixed_strings,
+                        output_mode=output_mode,
+                        glob=glob,
+                        type_=type,
+                        head_limit=head_limit,
+                        offset=offset,
+                        max_file_size=self._MAX_FILE_BYTES,
+                    )
+                else:
+                    raise
+
+            return self._format_grep_result(
+                pattern, path, output_mode, gre,
+                context_before, context_after, head_limit, offset,
+                path_prefix,
+            )
         except PermissionError as e:
             return f"Error: {e}"
         except Exception as e:

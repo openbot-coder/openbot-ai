@@ -1,4 +1,5 @@
 """Tests for Dream session key generation and rotation."""
+import os
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
@@ -37,6 +38,9 @@ class TestPruneDreamSessions:
                 f'"updated_at": "2026-05-28T10:00:{i:02d}"}}\n',
                 encoding="utf-8",
             )
+            # Ensure deterministic mtime ordering (files created in tight loop
+            # may share the same second-granularity mtime).
+            os.utime(path, (i, i))
 
         normal_path = sessions_dir / "telegram_123.jsonl"
         normal_path.write_text('{"_type": "metadata"}\n', encoding="utf-8")
