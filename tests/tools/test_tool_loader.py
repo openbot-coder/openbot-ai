@@ -268,9 +268,13 @@ def test_web_tools_enabled():
     from openbot.agent.tools.web import WebSearchTool
     mock_config = MagicMock()
     mock_config.web.enable = True
+    mock_config.web.search.enable = True
     ctx = ToolContext(config=mock_config, workspace="/tmp")
     assert WebSearchTool.enabled(ctx) is True
     mock_config.web.enable = False
+    assert WebSearchTool.enabled(ctx) is False
+    mock_config.web.enable = True
+    mock_config.web.search.enable = False
     assert WebSearchTool.enabled(ctx) is False
 
 
