@@ -29,6 +29,7 @@ class DuckDuckGoParser(BaseEngine):
     """
 
     name = "duckduckgo"
+    region = "international"
 
     async def search(self, query: str, max_results: int = 10,
                      **kwargs) -> list[SearchResult]:
@@ -127,6 +128,7 @@ class BraveParser(BaseEngine):
     """
 
     name = "brave"
+    region = "international"
 
     async def search(self, query: str, max_results: int = 10,
                      **kwargs) -> list[SearchResult]:

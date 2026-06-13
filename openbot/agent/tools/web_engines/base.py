@@ -48,6 +48,7 @@ class BaseEngine(ABC):
     """
 
     name: str = "unknown"
+    search_type: str = "search"  # "search" | "non-search"
     timeout: float = 15.0
 
     def __init__(self, timeout: float = 15.0, proxy: str | None = None):

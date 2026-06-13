@@ -27,7 +27,7 @@ class GitHubEngine(BaseEngine):
         """search_type: 'repositories' | 'code' | 'issues'"""
         t0 = time.time()
         endpoint = f"https://api.github.com/search/{search_type}"
-        params = {"q": query, "per_page": min(max_results, 30), "sort": "stars"}
+        params = {"q": query, "per_page": str(min(max_results, 30)), "sort": "stars"}
 
         try:
             async with primp.AsyncClient(timeout=self.timeout, proxy=self.proxy, follow_redirects=True) as client:

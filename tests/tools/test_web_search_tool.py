@@ -81,13 +81,18 @@ def test_web_search_config_custom():
 # ---------------------------------------------------------------------------
 
 def test_engine_groups_defined():
-    assert "web" in ENGINE_GROUPS
+    assert "local" in ENGINE_GROUPS
+    assert "global" in ENGINE_GROUPS
     assert "news" in ENGINE_GROUPS
     assert "academic" in ENGINE_GROUPS
     assert "github" in ENGINE_GROUPS
+    assert "hotlist" in ENGINE_GROUPS
+    assert "rss" in ENGINE_GROUPS
     assert "all" in ENGINE_GROUPS
-    assert len(ENGINE_GROUPS["web"]) >= 4
-    assert len(ENGINE_GROUPS["all"]) > len(ENGINE_GROUPS["web"])
+    assert len(ENGINE_GROUPS["local"]) >= 4
+    assert len(ENGINE_GROUPS["all"]) > len(ENGINE_GROUPS["local"])
+    assert "hotlist" in ENGINE_GROUPS["all"]
+    assert "rss" in ENGINE_GROUPS["all"]
 
 
 # ---------------------------------------------------------------------------
@@ -298,7 +303,7 @@ async def test_concurrent_search_category_routing():
     ):
         items, stats = await concurrent_search(
             query="AI",
-            category="news",
+            region="news",
         )
 
     assert stats.total_engines == 1
@@ -361,7 +366,7 @@ async def test_execute_with_category():
         await tool.execute(query="transformer", category="academic")
         mock_search.assert_called_once()
         call_kwargs = mock_search.call_args.kwargs
-        assert call_kwargs["category"] == "academic"
+        assert call_kwargs["region"] == "academic"
 
 
 # ---------------------------------------------------------------------------
@@ -398,6 +403,7 @@ def test_format_concurrent_results_no_results():
 class _MockEngine:
     """Engine that returns pre-configured results."""
     name = "mock"
+    search_type = "search"
 
     def __init__(self, results=None):
         self._results = results or []
@@ -409,6 +415,7 @@ class _MockEngine:
 class _SlowEngine:
     """Engine that sleeps for a configurable delay."""
     name = "slow"
+    search_type = "search"
 
     def __init__(self, delay=5.0):
         self.delay = delay

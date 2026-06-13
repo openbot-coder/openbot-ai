@@ -80,7 +80,7 @@ class CrossRefEngine(BaseEngine):
                      **kwargs) -> list[SearchResult]:
         t0 = time.time()
         url = "https://api.crossref.org/works"
-        params = {"query": query, "rows": min(max_results, 20),
+        params = {"query": query, "rows": str(min(max_results, 20)),
                   "sort": "relevance", "order": "desc"}
         headers = {"User-Agent": "openbot/1.0 (mailto:search@example.com)"}
 

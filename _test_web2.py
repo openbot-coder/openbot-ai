@@ -16,7 +16,7 @@ async def test_concurrent():
     t0 = time.monotonic()
     items, stats = await concurrent_search(
         query="latest AI news 2026",
-        category="web",
+        region="web",
         max_results=5,
         engine_timeout=3.0,
         total_timeout=8.0,
@@ -31,7 +31,7 @@ async def test_concurrent():
     t0 = time.monotonic()
     items2, stats2 = await concurrent_search(
         query="stock market",
-        category="news",
+        region="news",
         max_results=3,
         engine_timeout=3.0,
         total_timeout=8.0,
@@ -46,7 +46,7 @@ async def test_concurrent():
     t0 = time.monotonic()
     items3, stats3 = await concurrent_search(
         query="LLM agent framework",
-        category="github",
+        region="github",
         max_results=3,
         engine_timeout=3.0,
         total_timeout=8.0,

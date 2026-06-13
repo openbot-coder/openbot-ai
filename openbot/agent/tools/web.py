@@ -262,8 +262,7 @@ class WebSearchTool(Tool):
         n = min(max(count or self.max_results, 1), 10)
         items, stats = await concurrent_search(
             query=query,
-            category=category or "web",
-            engines=self.engines if (category or "web") == "web" else None,
+            region=category or "local",
             max_results=n,
             engine_timeout=self.engine_timeout,
             total_timeout=self.total_timeout,

@@ -70,6 +70,8 @@ _reachability = _ReachabilityCache(max_failures=2, cooldown_seconds=300.0)
 # URL templates used for SSRF pre-check (not for actual requests).
 _ENGINE_URL_TEMPLATES: dict[str, str] = {
     "bing": "https://cn.bing.com/search?q={q}",
+    "bing_global": "https://www.bing.com/search?q={q}",
+    "google": "https://www.google.com/search?q={q}",
     "sogou": "https://www.sogou.com/web?query={q}",
     "baidu": "https://www.baidu.com/s?wd={q}",
     "360": "https://www.so.com/s?q={q}",
@@ -87,12 +89,15 @@ def _build_engine_instances(timeout: float = 10.0, proxy: str | None = None) -> 
     from openbot.agent.tools.web_engines import (
         AcademicSearch,
         BaiduScraper,
+        BingGlobalScraper,
         BingScraper,
         BraveParser,
-        DDGSEngine,
         DuckDuckGoParser,
         GitHubEngine,
+        GoogleScraper,
+        HotlistEngine,
         NewsSearch,
+        RssEngine,
         Search360Scraper,
         SogouScraper,
         WeChatSearch,
@@ -100,33 +105,39 @@ def _build_engine_instances(timeout: float = 10.0, proxy: str | None = None) -> 
 
     return {
         "bing": BingScraper(timeout=timeout, proxy=proxy),
+        "bing_global": BingGlobalScraper(timeout=timeout, proxy=proxy),
+        "google": GoogleScraper(timeout=timeout, proxy=proxy),
         "sogou": SogouScraper(timeout=timeout, proxy=proxy),
         "baidu": BaiduScraper(timeout=timeout, proxy=proxy),
         "360": Search360Scraper(timeout=timeout, proxy=proxy),
         "duckduckgo": DuckDuckGoParser(timeout=timeout, proxy=proxy),
         "brave": BraveParser(timeout=timeout, proxy=proxy),
-        "ddgs": DDGSEngine(timeout=timeout, proxy=proxy, backend="auto"),
         "news": NewsSearch(timeout=timeout, proxy=proxy),
         "academic": AcademicSearch(timeout=timeout, proxy=proxy),
         "github": GitHubEngine(timeout=timeout, proxy=proxy),
         "wechat": WeChatSearch(timeout=timeout, proxy=proxy),
+        "hotlist": HotlistEngine(timeout=timeout, proxy=proxy),
+        "rss": RssEngine(timeout=timeout, proxy=proxy),
     }
 
 
 # Pre-defined engine groups.
-# ``web`` only includes engines reachable from mainland China.
-# ``web_intl`` adds DuckDuckGo + Brave (requires proxy).
+# ``local`` only includes engines reachable from mainland China.
+# ``global`` adds DuckDuckGo + Brave (requires proxy).
 ENGINE_GROUPS: dict[str, list[str]] = {
-    "web": ["bing", "sogou", "baidu", "360"],
-    "web_intl": ["bing", "sogou", "baidu", "360", "duckduckgo", "brave"],
-    "web_metasearch": ["ddgs"],              # single ddgs engine, auto backend rotation
+    "local": ["bing", "sogou", "baidu", "360", "wechat"],
+    "global": ["bing", "sogou", "baidu", "360", "bing_global", "google", "duckduckgo", "brave"],
+    "web_metasearch": [],
     "news": ["news"],
     "academic": ["academic"],
     "github": ["github"],
-    "wechat": ["wechat"],                     # WeChat public account articles
+    "wechat": ["wechat"],
+    "hotlist": ["hotlist"],
+    "rss": ["rss"],
+    "non-search": ["hotlist", "rss"],
     "all": [
-        "bing", "sogou", "baidu", "360", "duckduckgo", "brave",
-        "ddgs", "news", "academic", "github", "wechat",
+        "bing", "sogou", "baidu", "360", "bing_global", "google",
+        "duckduckgo", "brave", "news", "academic", "github", "wechat", "hotlist", "rss",
     ],
 }
 
@@ -282,24 +293,26 @@ def _deduplicate(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 async def concurrent_search(
     query: str,
-    category: str = "web",
-    engines: list[str] | None = None,
+    region: str = "local",
     max_results: int = 5,
     engine_timeout: float = 2.0,
     total_timeout: float = 5.0,
     proxy: str | None = None,
+    engines: list[str] | None = None,
 ) -> tuple[list[dict[str, Any]], SearchStats]:
     """Run multiple search engines concurrently and merge results.
 
     Args:
         query: Search query string.
-        category: Engine group name (``web``, ``news``, ``academic``,
-            ``github``, ``all``).  Ignored when *engines* is provided.
-        engines: Explicit engine list (overrides *category*).
+        region: Engine group name — determines which engines to run.
+            Common values: ``"local"`` (domestic 4), ``"global"``
+            (domestic + international), ``"all"`` (everything).
+            Ignored when *engines* is provided.
         max_results: Max results per engine.
         engine_timeout: Per-engine timeout in seconds.
         total_timeout: Overall timeout in seconds.
         proxy: HTTP proxy URL (e.g. ``http://127.0.0.1:7890``).
+        engines: Explicit engine list (overrides *region*).
 
     Returns:
         ``(items, stats)`` where *items* is a list of
@@ -308,16 +321,22 @@ async def concurrent_search(
     t0 = time.monotonic()
 
     # Resolve which engines to run
-    if engines is None:
-        engine_names = ENGINE_GROUPS.get(category, ENGINE_GROUPS["web"])
-    else:
+    if engines is not None:
         engine_names = engines
+    else:
+        engine_names = ENGINE_GROUPS.get(region, ENGINE_GROUPS["local"])
 
     # Instantiate engines — primp timeout inside each engine acts as a soft
     # limit.  ``_run_one_engine`` wraps with ``asyncio.wait_for`` (2x) as a
     # hard safety net because primp's connect timeout can be unreliable on
     # Windows when DNS resolution hangs.
     all_engines = _build_engine_instances(timeout=engine_timeout, proxy=proxy)
+
+    # Skip non-search engines (hotlist, rss, etc.)
+    engine_names = [
+        n for n in engine_names
+        if all_engines.get(n) is not None and all_engines[n].search_type != "non-search"
+    ]
 
     # Build tasks
     pending: dict[str, asyncio.Task[_EngineResult]] = {}
@@ -401,13 +420,17 @@ async def concurrent_search(
         else:
             stats.succeeded += 1
             for r in er.results:
-                all_items.append({
+                item = {
                     "title": getattr(r, "title", "") or "",
                     "url": getattr(r, "url", "") or "",
                     "snippet": getattr(r, "snippet", "") or "",
                     "source": getattr(r, "source", name),
-                    "category": getattr(r, "category", "") or category,
-                })
+                    "category": getattr(r, "category", "") or region,
+                }
+                extra = getattr(r, "extra", None)
+                if extra:
+                    item["extra"] = extra
+                all_items.append(item)
 
     stats.total_raw = len(all_items)
 
