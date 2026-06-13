@@ -1663,8 +1663,7 @@ async def test_settings_api_returns_safe_subset_and_updates_whitelist(
         provider="anthropic",
         reasoning_effort="high",
     )
-    config.tools.web.search.provider = "brave"
-    config.tools.web.search.api_key = "brave-secret"
+    config.tools.web.search.engines = ["brave"]
     save_config(config, config_path)
     monkeypatch.setattr("openbot.config.loader._current_config_path", config_path)
     monkeypatch.setattr(
@@ -1715,16 +1714,7 @@ async def test_settings_api_returns_safe_subset_and_updates_whitelist(
         assert providers["openai_codex"]["auth_type"] == "oauth"
         assert providers["openai_codex"]["configured"] is False
         assert body["agent"]["has_api_key"] is True
-        assert body["web_search"]["provider"] == "brave"
-        assert body["web_search"]["api_key_hint"] == "brav••••cret"
-        assert body["web_search"]["max_results"] == 5
         assert body["web"]["fetch"]["use_jina_reader"] is True
-        search_providers = {provider["name"]: provider for provider in body["web_search"]["providers"]}
-        assert search_providers["duckduckgo"]["credential"] == "none"
-        assert search_providers["exa"]["credential"] == "api_key"
-        assert search_providers["bocha"]["credential"] == "api_key"
-        assert search_providers["volcengine"]["credential"] == "api_key"
-        assert search_providers["searxng"]["credential"] == "base_url"
         assert body["image_generation"]["enabled"] is False
         assert body["image_generation"]["provider"] == "openrouter"
         assert body["image_generation"]["provider_configured"] is False
@@ -1854,19 +1844,14 @@ async def test_settings_api_returns_safe_subset_and_updates_whitelist(
 
         search_updated = await _http_get(
             "http://127.0.0.1:"
-            f"{port}/api/settings/web-search/update?provider=searxng"
-            "&base_url=https%3A%2F%2Fsearch.example.com"
-            "&max_results=8&timeout=45&use_jina_reader=false",
+            f"{port}/api/settings/web-search/update?"
+            "max_results=8&timeout=45&use_jina_reader=false",
             headers={"Authorization": "Bearer tok"},
         )
         assert search_updated.status_code == 200
         search_body = search_updated.json()
         assert search_body["requires_restart"] is True
         assert search_body["restart_required_sections"] == ["browser", "runtime"]
-        assert search_body["web_search"]["provider"] == "searxng"
-        assert search_body["web_search"]["api_key_hint"] is None
-        assert search_body["web_search"]["base_url"] == "https://search.example.com"
-        assert search_body["web_search"]["max_results"] == 8
         assert search_body["web"]["fetch"]["use_jina_reader"] is False
 
         network_safety_updated = await _http_get(
@@ -1943,11 +1928,7 @@ async def test_settings_api_returns_safe_subset_and_updates_whitelist(
         assert saved.providers.openrouter.api_key == "sk-or-next"
         assert saved.providers.openrouter.api_base == "https://openrouter.ai/api/v1"
         assert saved.providers.atomic_chat.api_base == "http://localhost:1337/v1"
-        assert saved.tools.web.search.provider == "searxng"
-        assert saved.tools.web.search.api_key == ""
-        assert saved.tools.web.search.base_url == "https://search.example.com"
         assert saved.tools.web.search.max_results == 8
-        assert saved.tools.web.search.timeout == 45
         assert saved.tools.web.fetch.use_jina_reader is False
         assert saved.tools.webui_allow_local_service_access is False
         assert saved.tools.image_generation.enabled is True

@@ -1,5 +1,7 @@
 from unittest.mock import patch, sentinel
 
+import httpx
+
 from openbot.providers.openai_compat_provider import OpenAICompatProvider
 from openbot.providers.registry import ProviderSpec
 
@@ -16,7 +18,7 @@ async def test_openai_compat_provider_defers_sdk_client_until_first_use() -> Non
 
     kwargs = mock_async_openai.call_args.kwargs
     _assert_openai_compat_timeout(kwargs["timeout"])
-    assert kwargs["http_client"] is None
+    assert isinstance(kwargs["http_client"], httpx.AsyncClient)
 
 
 async def test_openai_compat_provider_sets_timeout_on_local_http_client() -> None:

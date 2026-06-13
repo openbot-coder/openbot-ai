@@ -866,7 +866,9 @@ class AgentLoop:
             except asyncio.CancelledError:
                 # Preserve real task cancellation so shutdown can complete cleanly.
                 # Only ignore non-task CancelledError signals that may leak from integrations.
-                if not self._running or asyncio.current_task().cancelling():
+                _task = asyncio.current_task()
+                _is_cancelling = _task.cancelling() if hasattr(_task, "cancelling") else _task.cancelled()
+                if not self._running or _is_cancelling:
                     raise
                 continue
             except Exception as e:
