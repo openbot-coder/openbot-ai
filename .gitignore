@@ -107,3 +107,4 @@ temp/
 *.tmp
 exp/
 .playwright-mcp/
+coverage.json
