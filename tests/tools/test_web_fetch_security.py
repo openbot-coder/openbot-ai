@@ -83,6 +83,7 @@ async def test_web_fetch_result_contains_untrusted_flag(monkeypatch):
         is_redirect = False
         def raise_for_status(self): pass
         def json(self): return {}
+        async def aclose(self): pass
 
     class FakeClient:
         def __init__(self, *args, **kwargs):
@@ -112,23 +113,6 @@ async def test_web_fetch_can_skip_jina_and_use_custom_user_agent(monkeypatch):
     )
     seen_headers: list[dict] = []
 
-    async def _fail_jina(*args, **kwargs):
-        raise AssertionError("Jina Reader should be skipped when disabled")
-
-    class FakeStreamResponse:
-        status_code = 200
-        headers = {"content-type": "text/html"}
-        url = "https://example.com/page"
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
-        async def aread(self):
-            raise AssertionError("non-image prefetch body should not be read")
-
     class FakeResponse:
         status_code = 200
         url = "https://example.com/page"
@@ -137,6 +121,9 @@ async def test_web_fetch_can_skip_jina_and_use_custom_user_agent(monkeypatch):
         is_redirect = False
 
         def raise_for_status(self):
+            return None
+
+        async def aclose(self):
             return None
 
     class FakeClient:
@@ -153,7 +140,6 @@ async def test_web_fetch_can_skip_jina_and_use_custom_user_agent(monkeypatch):
             seen_headers.append(headers or {})
             return FakeResponse()
 
-    monkeypatch.setattr(tool, "_fetch_jina", _fail_jina)
     monkeypatch.setattr(tool, "_extract_readable_html", lambda html, mode: "Hello world")
     monkeypatch.setattr(web_module.primp, "AsyncClient", FakeClient)
 
@@ -162,8 +148,9 @@ async def test_web_fetch_can_skip_jina_and_use_custom_user_agent(monkeypatch):
 
     data = json.loads(result)
     assert data["extractor"] == "readability"
+    # Single request (no pre-fetch, no Jina) — exactly one header seen
+    assert len(seen_headers) == 1
     assert [headers["User-Agent"] for headers in seen_headers] == [
-        "openbot-test-agent",
         "openbot-test-agent",
     ]
 
@@ -179,6 +166,9 @@ async def test_web_fetch_falls_back_when_readability_dependency_is_missing(monke
         headers = {"content-type": "text/html"}
 
         def raise_for_status(self):
+            return None
+
+        async def aclose(self):
             return None
 
     class FakeClient:
@@ -201,7 +191,7 @@ async def test_web_fetch_falls_back_when_readability_dependency_is_missing(monke
     monkeypatch.setattr(web_module.primp, "AsyncClient", FakeClient)
 
     with patch("openbot.security.network.socket.getaddrinfo", _fake_resolve_public):
-        result = await tool._fetch_readability("https://example.com/page", "markdown", 5000)
+        result = await tool.execute(url="https://example.com/page")
 
     data = json.loads(result)
     assert data["extractor"] == "html"

@@ -20,8 +20,10 @@ class FakeResponse:
     url = "https://example.com/page"
     text = "<html><head><title>T</title></head><body><p>ok</p></body></html>"
     headers = {"content-type": "text/html"}
+    content = text.encode()
     def raise_for_status(self): pass
     def json(self): return {}
+    async def aclose(self): pass
 
 
 class FakeStreamResponse:
