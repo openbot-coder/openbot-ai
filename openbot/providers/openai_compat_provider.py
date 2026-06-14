@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import hashlib
 import importlib.util
 import json
@@ -485,10 +486,17 @@ class OpenAICompatProvider(LLMProvider):
         return bool(self._spec and self._spec.name == "mistral")
 
     @staticmethod
-    def _coerce_content_to_string(content: Any) -> str | None:
+    def _coerce_content_to_string(
+        content: Any, *, for_deepseek: bool = False
+    ) -> str | None:
         """Coerce block/list content into plain text for strict string-only APIs."""
         if content is None or isinstance(content, str):
             return content
+        # For DeepSeek, preserve list content blocks instead of json.dumps
+        # so multi-modal blocks (text/image_url) keep their structure.
+        if for_deepseek and isinstance(content, list):
+            text = OpenAICompatProvider._extract_text_content(content)
+            return text if text else None
         text = OpenAICompatProvider._extract_text_content(content)
         if isinstance(text, str) and text:
             return text
@@ -578,7 +586,9 @@ class OpenAICompatProvider(LLMProvider):
                 force_string_content
                 and not (clean.get("role") == "assistant" and clean.get("tool_calls"))
             ):
-                clean["content"] = self._coerce_content_to_string(clean.get("content"))
+                clean["content"] = self._coerce_content_to_string(
+                    clean.get("content"), for_deepseek=True
+                )
         return self._enforce_role_alternation(sanitized)
 
     # ------------------------------------------------------------------
@@ -707,6 +717,8 @@ class OpenAICompatProvider(LLMProvider):
             and any(t in model_name.lower() for t in ("deepseek-v4", "deepseek-reasoner"))
         )
         if explicit_thinking or implicit_deepseek_thinking:
+            # Deep-copy so we don't mutate the caller's session history
+            kwargs["messages"] = copy.deepcopy(kwargs["messages"])
             for msg in kwargs["messages"]:
                 if msg.get("role") == "assistant" and "reasoning_content" not in msg:
                     msg["reasoning_content"] = ""
