@@ -136,13 +136,6 @@ include = [
     "openbot/templates/**/*.md",
     "openbot/skills/**/*.md",
     "openbot/skills/**/*.sh",
-    "openbot/web/dist/**/*",
-]
-# openbot/web/dist/ is produced by `cd webui && bun run build` and is
-# git-ignored. List it as an artifact so hatch ships it in both wheel and
-# sdist even though VCS does not track it.
-artifacts = [
-    "openbot/web/dist/**/*",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -157,7 +150,6 @@ packages = ["openbot"]
 [tool.hatch.build.targets.sdist]
 include = [
     "openbot/",
-    "openbot/web/dist/",
     "bridge/",
     "hatch_build.py",
     "README.md",
