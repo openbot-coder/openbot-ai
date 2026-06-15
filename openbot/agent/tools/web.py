@@ -6,7 +6,6 @@ import asyncio
 import html
 import json
 import re
-import time
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
@@ -41,6 +40,10 @@ class WebSearchConfig(Base):
     )
     engine_timeout: float = 2.0
     total_timeout: float = 5.0
+    api_keys: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="Paid API engine keys: {\"baidu_qianfan\": [\"key1\", ...], \"tavily\": [...]}",
+    )
 
 
 class WebFetchConfig(Base):
@@ -194,6 +197,7 @@ class WebSearchTool(Tool):
             engines=ctx.config.web.search.engines,
             engine_timeout=ctx.config.web.search.engine_timeout,
             total_timeout=ctx.config.web.search.total_timeout,
+            api_keys=ctx.config.web.search.api_keys,
             proxy=ctx.config.web.proxy,
         )
 
@@ -203,12 +207,14 @@ class WebSearchTool(Tool):
         engines: list[str] | None = None,
         engine_timeout: float = 2.0,
         total_timeout: float = 5.0,
+        api_keys: dict[str, list[str]] | None = None,
         proxy: str | None = None,
     ):
         self.max_results = max_results
         self.engines = engines
         self.engine_timeout = engine_timeout
         self.total_timeout = total_timeout
+        self.api_keys = api_keys or {}
         self.proxy = proxy
 
     @property
@@ -242,6 +248,7 @@ class WebSearchTool(Tool):
             engine_timeout=self.engine_timeout,
             total_timeout=self.total_timeout,
             proxy=self.proxy,
+            api_keys=self.api_keys or None,
         )
         return format_concurrent_results(query, items, stats, max_display=n)
 

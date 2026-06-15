@@ -5,7 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from openbot.agent.tools.web import WebSearchTool
+from openbot.agent.tools.web import WebSearchConfig, WebSearchTool
+from openbot.agent.tools.web_engines.api_engine import BaseApiEngine, _QuotaTracker
 from openbot.agent.tools.web_engines.base import SearchResult
 from openbot.agent.tools.web_search_concurrent import (
     ENGINE_GROUPS,
@@ -16,7 +17,6 @@ from openbot.agent.tools.web_search_concurrent import (
     concurrent_search,
     format_concurrent_results,
 )
-from openbot.config.schema import WebSearchConfig
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -423,3 +423,258 @@ class _SlowEngine:
     async def search(self, query, max_results=10, **kwargs):
         await asyncio.sleep(self.delay)
         return []
+
+
+# ---------------------------------------------------------------------------
+# _QuotaTracker tests
+# ---------------------------------------------------------------------------
+
+class TestQuotaTracker:
+    """Unit tests for _QuotaTracker key rotation and cooldown logic."""
+
+    def test_pick_key_returns_least_used(self):
+        tracker = _QuotaTracker(max_queries_per_key=10, cooldown_seconds=60)
+        tracker.record_success("key_A")
+        tracker.record_success("key_A")
+        tracker.record_success("key_B")
+        key = tracker.pick_key(["key_A", "key_B", "key_C"])
+        assert key == "key_C"  # zero usage preferred
+
+    def test_pick_key_none_when_all_in_cooldown(self):
+        tracker = _QuotaTracker(max_queries_per_key=10, cooldown_seconds=9999)
+        for _ in range(3):
+            tracker.record_failure("key_A")
+        assert tracker.pick_key(["key_A"]) is None
+
+    def test_cooldown_expires_allows_retry(self):
+        tracker = _QuotaTracker(max_queries_per_key=10, cooldown_seconds=0)
+        tracker.record_failure("key_A")
+        tracker.record_failure("key_A")
+        assert tracker.pick_key(["key_A"]) is not None  # cooldown 0 → immediately available
+
+    def test_record_success_resets_failures(self):
+        tracker = _QuotaTracker(max_queries_per_key=10, cooldown_seconds=60)
+        tracker.record_failure("key_A")
+        tracker.record_failure("key_A")
+        tracker.record_success("key_A")
+        assert tracker.pick_key(["key_A"]) == "key_A"
+
+    def test_reset_daily_clears_quota(self):
+        tracker = _QuotaTracker(max_queries_per_key=10, cooldown_seconds=0)
+        tracker.record_success("key_A")
+        tracker.record_success("key_A")
+        assert tracker._states["key_A"].quota_used == 2
+        tracker.reset_daily()
+        assert tracker._states["key_A"].quota_used == 0
+
+
+class TestBaseApiEngineKeyManagement:
+    """Tests for BaseApiEngine key configuration and quota integration."""
+
+    def test_configure_keys_strips_whitespace(self):
+        eng = _FakeApiEngine(timeout=5.0)
+        eng.configure_keys(["  key1  ", "key2"])
+        assert eng._keys == ["key1", "key2"]
+
+    def test_configure_keys_rejects_empty(self):
+        eng = _FakeApiEngine(timeout=5.0)
+        with pytest.raises(ValueError, match="At least one API key"):
+            eng.configure_keys([])
+
+    def test_no_keys_returns_empty(self):
+        eng = _FakeApiEngine(timeout=5.0)
+        assert eng._keys == []
+
+    @pytest.mark.asyncio
+    async def test_quota_exhaustion_blocks_key(self):
+        eng = _FakeApiEngine(timeout=5.0)
+        eng.configure_keys(["k1"], max_queries_per_key=2)
+        await eng.search("test")
+        await eng.search("test")
+        # 2 used, max is 2 → next should get empty (quota exhausted)
+        results = await eng.search("test")
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_cooldown_after_three_failures(self):
+        eng = _FakeApiEngine(timeout=0.01)
+        eng.configure_keys(["k1"], max_queries_per_key=100)
+
+        async def _fail(*a, **kw):
+            raise TimeoutError("boom")
+
+        eng._search_with_key = _fail  # type: ignore[method-assign]
+
+        for _ in range(3):
+            await eng.search("test")
+
+        # After 3 failures, key is in cooldown — search returns empty without calling engine
+        call_count = 0
+
+        async def _counting_fail(*a, **kw):
+            nonlocal call_count
+            call_count += 1
+            raise TimeoutError("boom")
+
+        eng._search_with_key = _counting_fail  # type: ignore[method-assign]
+        await eng.search("test")
+        assert call_count == 0  # skipped due to cooldown
+
+
+# ---------------------------------------------------------------------------
+# API engine groups
+# ---------------------------------------------------------------------------
+
+def test_api_engine_groups_registered():
+    assert "baidu_qianfan" in ENGINE_GROUPS
+    assert "tavily" in ENGINE_GROUPS
+    assert "api" in ENGINE_GROUPS
+    assert "baidu_qianfan" in ENGINE_GROUPS["api"]
+    assert "tavily" in ENGINE_GROUPS["api"]
+
+
+# ---------------------------------------------------------------------------
+# WebSearchConfig api_keys
+# ---------------------------------------------------------------------------
+
+def test_web_search_config_api_keys_default_empty():
+    cfg = WebSearchConfig()
+    assert cfg.api_keys == {}
+
+
+def test_web_search_config_api_keys_custom():
+    cfg = WebSearchConfig(api_keys={"baidu_qianfan": ["k1", "k2"], "tavily": ["t1"]})
+    assert cfg.api_keys == {"baidu_qianfan": ["k1", "k2"], "tavily": ["t1"]}
+
+
+# ---------------------------------------------------------------------------
+# BaseApiEngine abstract interface
+# ---------------------------------------------------------------------------
+
+class _FakeApiEngine(BaseApiEngine):
+    """Concrete stub for testing BaseApiEngine orchestration."""
+    _provider_name = "fake"
+
+    async def _search_with_key(self, query, max_results, api_key):
+        return [SearchResult(title="ok", url="https://x.com", source="fake")]
+
+
+@pytest.mark.asyncio
+async def test_base_api_engine_no_keys_returns_empty():
+    eng = _FakeApiEngine(timeout=5.0)
+    results = await eng.search("test")
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_base_api_engine_key_rotation_on_timeout():
+    eng = _FakeApiEngine(timeout=0.01)
+    eng.configure_keys(["k1", "k2"], max_queries_per_key=100)
+
+    async def _slow(*a, **kw):
+        await asyncio.sleep(0.1)
+        return []
+
+    eng._search_with_key = _slow  # type: ignore[method-assign]
+    results = await eng.search("test")
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_base_api_engine_records_quota_on_success():
+    eng = _FakeApiEngine(timeout=5.0)
+    eng.configure_keys(["k1"], max_queries_per_key=100)
+    results = await eng.search("test")
+    assert len(results) == 1
+    # key should be usable again
+    results2 = await eng.search("test")
+    assert len(results2) == 1
+
+
+@pytest.mark.asyncio
+async def test_base_api_engine_cooldown_after_failures():
+    eng = _FakeApiEngine(timeout=0.01)
+    eng.configure_keys(["k1"], max_queries_per_key=100)
+
+    async def _fail(*a, **kw):
+        raise TimeoutError("boom")
+
+    eng._search_with_key = _fail  # type: ignore[method-assign]
+
+    for _ in range(3):
+        await eng.search("test")
+
+    # After 3 failures, key should be in cooldown → returns empty without calling
+    call_count = 0
+    orig = eng._search_with_key
+
+    async def _counting_fail(*a, **kw):
+        nonlocal call_count
+        call_count += 1
+        raise TimeoutError("boom")
+
+    eng._search_with_key = _counting_fail  # type: ignore[method-assign]
+    await eng.search("test")
+    assert call_count == 0  # skipped due to cooldown
+
+
+# ---------------------------------------------------------------------------
+# concurrent_search with api_keys
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_concurrent_search_with_api_keys():
+    """API engines should be instantiated when api_keys are provided."""
+
+    def _fake_build(timeout=10.0, proxy=None, api_keys=None):
+        engines = {"bing": _MockEngine([])}
+        if api_keys and "tavily" in api_keys:
+            from openbot.agent.tools.web_engines.api_engine import TavilyEngine
+            tv = TavilyEngine(timeout=timeout, proxy=proxy)
+            tv.configure_keys(api_keys["tavily"])
+            engines["tavily"] = tv
+        return engines
+
+    with patch(
+        "openbot.agent.tools.web_search_concurrent._build_engine_instances",
+        side_effect=_fake_build,
+    ), patch(
+        "openbot.agent.tools.web_search_concurrent._ssrf_check",
+        return_value=(True, ""),
+    ):
+        items, stats = await concurrent_search(
+            query="test",
+            engines=["tavily"],
+            api_keys={"tavily": ["tv-key-1"]},
+        )
+
+    assert stats.total_engines >= 1
+    assert "tavily" in [e for e in stats.per_engine]
+
+
+def test_web_search_tool_passes_api_keys():
+    tool = WebSearchTool(
+        max_results=5,
+        api_keys={"baidu_qianfan": ["bk1", "bk2"], "tavily": ["tv1"]},
+    )
+    assert tool.api_keys == {"baidu_qianfan": ["bk1", "bk2"], "tavily": ["tv1"]}
+
+
+@pytest.mark.asyncio
+async def test_web_search_tool_execute_forwards_api_keys():
+    tool = WebSearchTool(
+        max_results=5,
+        api_keys={"baidu_qianfan": ["bk1"]},
+    )
+
+    with patch(
+        "openbot.agent.tools.web_search_concurrent.concurrent_search",
+        new_callable=AsyncMock,
+        return_value=(
+            [],
+            SearchStats(total_engines=1, succeeded=0, duration_ms=50),
+        ),
+    ) as mock_search:
+        await tool.execute(query="hello")
+        call_kwargs = mock_search.call_args.kwargs
+        assert call_kwargs["api_keys"] == {"baidu_qianfan": ["bk1"]}

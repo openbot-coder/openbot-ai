@@ -18,7 +18,6 @@ from urllib.parse import quote_plus
 
 from loguru import logger
 
-
 # ---------------------------------------------------------------------------
 # Reachability cache — auto-skip engines that fail repeatedly.
 # ---------------------------------------------------------------------------
@@ -81,13 +80,20 @@ _ENGINE_URL_TEMPLATES: dict[str, str] = {
     "academic": "https://export.arxiv.org/api/query?search_query=all:{q}",
     "github": "https://api.github.com/search/repositories?q={q}",
     "wechat": "https://weixin.sogou.com/weixin?type=2&query={q}",
+    "baidu_qianfan": "https://qianfan.baidubce.com/api/v1/ai_search/v2",
+    "tavily": "https://api.tavily.com/search",
 }
 
 
-def _build_engine_instances(timeout: float = 10.0, proxy: str | None = None) -> dict[str, Any]:
+def _build_engine_instances(
+    timeout: float = 10.0,
+    proxy: str | None = None,
+    api_keys: dict[str, list[str]] | None = None,
+) -> dict[str, Any]:
     """Create one instance per engine.  Called once per search."""
     from openbot.agent.tools.web_engines import (
         AcademicSearch,
+        BaiduQianfanEngine,
         BaiduScraper,
         BingGlobalScraper,
         BingScraper,
@@ -100,10 +106,11 @@ def _build_engine_instances(timeout: float = 10.0, proxy: str | None = None) -> 
         RssEngine,
         Search360Scraper,
         SogouScraper,
+        TavilyEngine,
         WeChatSearch,
     )
 
-    return {
+    engines: dict[str, Any] = {
         "bing": BingScraper(timeout=timeout, proxy=proxy),
         "bing_global": BingGlobalScraper(timeout=timeout, proxy=proxy),
         "google": GoogleScraper(timeout=timeout, proxy=proxy),
@@ -120,6 +127,21 @@ def _build_engine_instances(timeout: float = 10.0, proxy: str | None = None) -> 
         "rss": RssEngine(timeout=timeout, proxy=proxy),
     }
 
+    if api_keys:
+        bq_keys = api_keys.get("baidu_qianfan")
+        if bq_keys:
+            eng = BaiduQianfanEngine(timeout=timeout, proxy=proxy)
+            eng.configure_keys(bq_keys)
+            engines["baidu_qianfan"] = eng
+
+        tv_keys = api_keys.get("tavily")
+        if tv_keys:
+            eng = TavilyEngine(timeout=timeout, proxy=proxy)
+            eng.configure_keys(tv_keys)
+            engines["tavily"] = eng
+
+    return engines
+
 
 # Pre-defined engine groups.
 # ``local`` only includes engines reachable from mainland China.
@@ -135,9 +157,13 @@ ENGINE_GROUPS: dict[str, list[str]] = {
     "hotlist": ["hotlist"],
     "rss": ["rss"],
     "non-search": ["hotlist", "rss"],
+    "baidu_qianfan": ["baidu_qianfan"],
+    "tavily": ["tavily"],
+    "api": ["baidu_qianfan", "tavily"],
     "all": [
         "bing", "sogou", "baidu", "360", "bing_global", "google",
-        "duckduckgo", "brave", "news", "academic", "github", "wechat", "hotlist", "rss",
+        "duckduckgo", "brave", "news", "academic", "github", "wechat",
+        "hotlist", "rss", "baidu_qianfan", "tavily",
     ],
 }
 
@@ -299,6 +325,7 @@ async def concurrent_search(
     total_timeout: float = 5.0,
     proxy: str | None = None,
     engines: list[str] | None = None,
+    api_keys: dict[str, list[str]] | None = None,
 ) -> tuple[list[dict[str, Any]], SearchStats]:
     """Run multiple search engines concurrently and merge results.
 
@@ -313,6 +340,8 @@ async def concurrent_search(
         total_timeout: Overall timeout in seconds.
         proxy: HTTP proxy URL (e.g. ``http://127.0.0.1:7890``).
         engines: Explicit engine list (overrides *region*).
+        api_keys: Dict of ``{provider_name: [key1, key2, ...]}`` for
+            paid API engines (e.g. ``{"baidu_qianfan": ["k1", "k2"]}``).
 
     Returns:
         ``(items, stats)`` where *items* is a list of
@@ -330,7 +359,9 @@ async def concurrent_search(
     # limit.  ``_run_one_engine`` wraps with ``asyncio.wait_for`` (2x) as a
     # hard safety net because primp's connect timeout can be unreliable on
     # Windows when DNS resolution hangs.
-    all_engines = _build_engine_instances(timeout=engine_timeout, proxy=proxy)
+    all_engines = _build_engine_instances(
+        timeout=engine_timeout, proxy=proxy, api_keys=api_keys,
+    )
 
     # Skip non-search engines (hotlist, rss, etc.)
     engine_names = [
