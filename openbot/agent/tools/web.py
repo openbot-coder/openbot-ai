@@ -42,7 +42,7 @@ class WebSearchConfig(Base):
     total_timeout: float = 5.0
     api_keys: dict[str, list[str]] = Field(
         default_factory=dict,
-        description="Paid API engine keys: {\"baidu_qianfan\": [\"key1\", ...], \"tavily\": [...]}",
+        description="Paid API engine keys: {\"baidu_web_search\": [\"key1\"], \"baidu_ai_search\": [\"key2\"], \"tavily\": [...]}",
     )
 
 

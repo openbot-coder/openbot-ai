@@ -51,6 +51,7 @@ If a local `openbot agent` session can already answer normally, you can also ask
 | Open the bundled browser UI | [`../webui/README.md`](../webui/README.md) | WebUI on port `8765`, or Vite HMR when developing the frontend |
 | Connect Telegram, Discord, WeChat, Slack, and other apps | [`chat-apps.md`](./chat-apps.md) | A gateway-backed chat channel with access control |
 | Use slash commands and periodic tasks | [`chat-commands.md`](./chat-commands.md) | Pairing, model presets, heartbeat tasks, and chat-side controls |
+| Use or create agent skills | [`../openbot/skills/README.md`](../openbot/skills/README.md) | Built-in and custom skills for agent capabilities |
 | Generate images | [`image-generation.md`](./image-generation.md) | Image provider config, WebUI image mode, and artifact behavior |
 | Run several isolated bots | [`multiple-instances.md`](./multiple-instances.md) | Separate configs, workspaces, ports, and sessions |
 | Deploy outside a terminal | [`deployment.md`](./deployment.md) | Docker, systemd user services, and macOS LaunchAgent setup |
@@ -65,6 +66,7 @@ If a local `openbot agent` session can already answer normally, you can also ask
 | Architecture | [`architecture.md`](./architecture.md) | Source-level runtime map for core flow, providers, channels, tools, WebUI, memory, security, and extension points |
 | Development | [`development.md`](./development.md) | Contributor notes for adding providers and transcription adapters |
 | Memory | [`memory.md`](./memory.md) | Session history, Dream consolidation, memory files, and versioning |
+| Skills | [`../openbot/skills/README.md`](../openbot/skills/README.md) | Built-in and custom skills reference |
 | Observability | [`configuration.md#langfuse-observability`](./configuration.md#langfuse-observability) | Langfuse tracing setup and required environment variables |
 | WebSocket protocol | [`websocket.md`](./websocket.md) | Custom clients, token issuance, multiplexed chats, media, and protocol events |
 | OpenAI-compatible API | [`openai-api.md`](./openai-api.md) | `/v1/chat/completions`, `/v1/models`, file uploads, and SDK-compatible usage |

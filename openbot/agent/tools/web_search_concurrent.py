@@ -80,7 +80,8 @@ _ENGINE_URL_TEMPLATES: dict[str, str] = {
     "academic": "https://export.arxiv.org/api/query?search_query=all:{q}",
     "github": "https://api.github.com/search/repositories?q={q}",
     "wechat": "https://weixin.sogou.com/weixin?type=2&query={q}",
-    "baidu_qianfan": "https://qianfan.baidubce.com/api/v1/ai_search/v2",
+    "baidu_web_search": "https://qianfan.baidubce.com/v2/ai_search/web_search",
+    "baidu_ai_search": "https://qianfan.baidubce.com/v2/ai_search/chat/completions",
     "tavily": "https://api.tavily.com/search",
 }
 
@@ -93,7 +94,8 @@ def _build_engine_instances(
     """Create one instance per engine.  Called once per search."""
     from openbot.agent.tools.web_engines import (
         AcademicSearch,
-        BaiduQianfanEngine,
+        BaiduAISearchEngine,
+        BaiduWebSearchEngine,
         BaiduScraper,
         BingGlobalScraper,
         BingScraper,
@@ -128,11 +130,17 @@ def _build_engine_instances(
     }
 
     if api_keys:
-        bq_keys = api_keys.get("baidu_qianfan")
-        if bq_keys:
-            eng = BaiduQianfanEngine(timeout=timeout, proxy=proxy)
-            eng.configure_keys(bq_keys)
-            engines["baidu_qianfan"] = eng
+        bws_keys = api_keys.get("baidu_web_search")
+        if bws_keys:
+            eng = BaiduWebSearchEngine(timeout=timeout, proxy=proxy)
+            eng.configure_keys(bws_keys)
+            engines["baidu_web_search"] = eng
+
+        bai_keys = api_keys.get("baidu_ai_search")
+        if bai_keys:
+            eng = BaiduAISearchEngine(timeout=timeout, proxy=proxy)
+            eng.configure_keys(bai_keys)
+            engines["baidu_ai_search"] = eng
 
         tv_keys = api_keys.get("tavily")
         if tv_keys:
@@ -157,13 +165,14 @@ ENGINE_GROUPS: dict[str, list[str]] = {
     "hotlist": ["hotlist"],
     "rss": ["rss"],
     "non-search": ["hotlist", "rss"],
-    "baidu_qianfan": ["baidu_qianfan"],
+    "baidu_web_search": ["baidu_web_search"],
+    "baidu_ai_search": ["baidu_ai_search"],
     "tavily": ["tavily"],
-    "api": ["baidu_qianfan", "tavily"],
+    "api": ["baidu_web_search", "baidu_ai_search", "tavily"],
     "all": [
         "bing", "sogou", "baidu", "360", "bing_global", "google",
         "duckduckgo", "brave", "news", "academic", "github", "wechat",
-        "hotlist", "rss", "baidu_qianfan", "tavily",
+        "hotlist", "rss", "baidu_web_search", "baidu_ai_search", "tavily",
     ],
 }
 
@@ -341,7 +350,7 @@ async def concurrent_search(
         proxy: HTTP proxy URL (e.g. ``http://127.0.0.1:7890``).
         engines: Explicit engine list (overrides *region*).
         api_keys: Dict of ``{provider_name: [key1, key2, ...]}`` for
-            paid API engines (e.g. ``{"baidu_qianfan": ["k1", "k2"]}``).
+            paid API engines (e.g. ``{"baidu_web_search": ["k1"], "tavily": ["t1"]}``).
 
     Returns:
         ``(items, stats)`` where *items* is a list of

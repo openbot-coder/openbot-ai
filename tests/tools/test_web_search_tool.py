@@ -526,10 +526,12 @@ class TestBaseApiEngineKeyManagement:
 # ---------------------------------------------------------------------------
 
 def test_api_engine_groups_registered():
-    assert "baidu_qianfan" in ENGINE_GROUPS
+    assert "baidu_web_search" in ENGINE_GROUPS
+    assert "baidu_ai_search" in ENGINE_GROUPS
     assert "tavily" in ENGINE_GROUPS
     assert "api" in ENGINE_GROUPS
-    assert "baidu_qianfan" in ENGINE_GROUPS["api"]
+    assert "baidu_web_search" in ENGINE_GROUPS["api"]
+    assert "baidu_ai_search" in ENGINE_GROUPS["api"]
     assert "tavily" in ENGINE_GROUPS["api"]
 
 
@@ -543,8 +545,8 @@ def test_web_search_config_api_keys_default_empty():
 
 
 def test_web_search_config_api_keys_custom():
-    cfg = WebSearchConfig(api_keys={"baidu_qianfan": ["k1", "k2"], "tavily": ["t1"]})
-    assert cfg.api_keys == {"baidu_qianfan": ["k1", "k2"], "tavily": ["t1"]}
+    cfg = WebSearchConfig(api_keys={"baidu_web_search": ["k1", "k2"], "tavily": ["t1"]})
+    assert cfg.api_keys == {"baidu_web_search": ["k1", "k2"], "tavily": ["t1"]}
 
 
 # ---------------------------------------------------------------------------
@@ -655,16 +657,16 @@ async def test_concurrent_search_with_api_keys():
 def test_web_search_tool_passes_api_keys():
     tool = WebSearchTool(
         max_results=5,
-        api_keys={"baidu_qianfan": ["bk1", "bk2"], "tavily": ["tv1"]},
+        api_keys={"baidu_web_search": ["bk1", "bk2"], "tavily": ["tv1"]},
     )
-    assert tool.api_keys == {"baidu_qianfan": ["bk1", "bk2"], "tavily": ["tv1"]}
+    assert tool.api_keys == {"baidu_web_search": ["bk1", "bk2"], "tavily": ["tv1"]}
 
 
 @pytest.mark.asyncio
 async def test_web_search_tool_execute_forwards_api_keys():
     tool = WebSearchTool(
         max_results=5,
-        api_keys={"baidu_qianfan": ["bk1"]},
+        api_keys={"baidu_web_search": ["bk1"]},
     )
 
     with patch(
@@ -677,4 +679,4 @@ async def test_web_search_tool_execute_forwards_api_keys():
     ) as mock_search:
         await tool.execute(query="hello")
         call_kwargs = mock_search.call_args.kwargs
-        assert call_kwargs["api_keys"] == {"baidu_qianfan": ["bk1"]}
+        assert call_kwargs["api_keys"] == {"baidu_web_search": ["bk1"]}

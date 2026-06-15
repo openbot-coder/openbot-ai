@@ -1,8 +1,9 @@
 """Paid search API engines — multi-key round-robin with quota tracking.
 
 Supported providers:
-  - baidu_qianfan  — 百度千帆 AI Search API V2 (国内直连)
-  - tavily         — Tavily Search API (国内镜像友好)
+  - baidu_web_search   — 百度千帆 普通搜索 /v2/ai_search/web_search (国内直连)
+  - baidu_ai_search    — 百度千帆 AI 搜索 /v2/ai_search/chat/completions (LLM + 搜索)
+  - tavily             — Tavily Search API (国内镜像友好)
 
 Each provider inherits from BaseApiEngine which handles:
   - Key rotation (round-robin or least-remaining)
@@ -160,23 +161,23 @@ class BaseApiEngine(BaseEngine):
 
 
 # ---------------------------------------------------------------------------
-# Baidu Qianfan AI Search V2
+# Baidu Qianfan Web Search (普通搜索)
 # ---------------------------------------------------------------------------
 
-class BaiduQianfanEngine(BaseApiEngine):
-    """百度千帆 AI Search API V2 — 国内直连，百度引擎+AI增强。
+class BaiduWebSearchEngine(BaseApiEngine):
+    """百度千帆 普通搜索 — /v2/ai_search/web_search，返回 references 列表。
 
     API doc: https://cloud.baidu.com/doc/qianfan/aisearch
     """
 
-    name = "baidu_qianfan"
-    _default_endpoint = "https://qianfan.baidubce.com/api/v1/ai_search/v2"
+    name = "baidu_web_search"
+    _default_endpoint = "https://qianfan.baidubce.com/v2/ai_search/web_search"
     _default_timeout = 15.0
 
     def __init__(self, timeout: float = 15.0, proxy: str | None = None):
         super().__init__(timeout=timeout, proxy=proxy)
 
-    def _make_client(self) -> httpx.AsyncClient:  # coverage: trivial wrapper
+    def _make_client(self) -> httpx.AsyncClient:
         headers = {
             "Content-Type": "application/json",
         }
@@ -188,37 +189,132 @@ class BaiduQianfanEngine(BaseApiEngine):
         )
 
     async def _search_with_key(self, query: str, max_results: int, api_key: str) -> list[SearchResult]:
-        # coverage: requires real API — integration test only
-        endpoint = self._default_endpoint
         payload = {
-            "query": query,
-            "num": min(max_results, 10),
+            "messages": [
+                {"role": "user", "content": query}
+            ]
         }
 
         async with self._make_client() as client:
             resp = await client.post(
-                endpoint,
+                self._default_endpoint,
                 json=payload,
                 headers={"Authorization": f"Bearer {api_key}"},
             )
             resp.raise_for_status()
             data = resp.json()
 
+        if "code" in data:
+            raise Exception(data.get("message", "Unknown error"))
+
         results: list[SearchResult] = []
-        for item in data.get("results", data.get("data", []))[:max_results]:
+        refs = data.get("references", [])
+        for item in refs[:max_results]:
+            item.pop("snippet", None)
             title = item.get("title", "").strip()
-            url = item.get("url", item.get("link", "")).strip()
-            snippet = item.get("snippet", item.get("summary", item.get("content", ""))).strip()
+            url = item.get("url", "").strip()
+            content = item.get("content", "").strip()
             if title and url:
                 results.append(SearchResult(
                     title=title,
                     url=url,
-                    snippet=snippet,
-                    source="baidu_qianfan",
+                    snippet=content[:500] if content else "",
+                    source="baidu_web_search",
                     category="web",
                     extra={"published": item.get("date", item.get("publish_time", ""))},
                 ))
-        logger.info("[baidu_qianfan] {} results for query={}", len(results), query[:50])
+        logger.info("[baidu_web_search] {} results for query={}", len(results), query[:50])
+        return results
+
+
+# ---------------------------------------------------------------------------
+# Baidu Qianfan AI Search (AI搜索)
+# ---------------------------------------------------------------------------
+
+class BaiduAISearchEngine(BaseApiEngine):
+    """百度千帆 AI 搜索 — /v2/ai_search/chat/completions，LLM + 搜索增强。
+
+    对话式接口，模型自动检索网页并生成答案，返回 references 引用。
+    支持 enable_deep_search 深度搜索模式。
+    """
+
+    name = "baidu_ai_search"
+    _default_endpoint = "https://qianfan.baidubce.com/v2/ai_search/chat/completions"
+    _default_timeout = 60.0
+    _default_model = "ernie-4.5-turbo-32k"
+
+    def __init__(self, timeout: float = 60.0, proxy: str | None = None, model: str = ""):
+        super().__init__(timeout=timeout, proxy=proxy)
+        self._model = model or self._default_model
+
+    def _make_client(self) -> httpx.AsyncClient:
+        return httpx.AsyncClient(
+            proxy=self.proxy,
+            timeout=self.timeout,
+            follow_redirects=True,
+        )
+
+    async def _search_with_key(self, query: str, max_results: int, api_key: str) -> list[SearchResult]:
+        payload = {
+            "messages": [
+                {"role": "user", "content": query}
+            ],
+            "stream": False,
+            "model": self._model,
+            "instruction": "##",
+            "enable_corner_markers": True,
+            "enable_deep_search": True,
+        }
+
+        async with self._make_client() as client:
+            resp = await client.post(
+                self._default_endpoint,
+                json=payload,
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+        if "code" in data:
+            raise Exception(data.get("message", "Unknown error"))
+
+        # AI 搜索响应结构：choices[0].message.content 是生成答案，
+        # 同时 references 字段包含引用来源
+        results: list[SearchResult] = []
+
+        # 先提取 references（如果有）
+        refs = data.get("references", [])
+        for item in refs[:max_results]:
+            item.pop("snippet", None)
+            title = item.get("title", "").strip()
+            url = item.get("url", "").strip()
+            content = item.get("content", "").strip()
+            if title and url:
+                results.append(SearchResult(
+                    title=title,
+                    url=url,
+                    snippet=content[:500] if content else "",
+                    source="baidu_ai_search",
+                    category="web",
+                    extra={"published": item.get("date", "")},
+                ))
+
+        # 如果没有 references，从 choices 提取内容作为单条结果
+        if not results:
+            choices = data.get("choices", [])
+            if choices:
+                msg = choices[0].get("message", {})
+                content = msg.get("content", "").strip()
+                if content:
+                    results.append(SearchResult(
+                        title=f"AI Search: {query[:30]}",
+                        url="",
+                        snippet=content[:1000],
+                        source="baidu_ai_search",
+                        category="web",
+                    ))
+
+        logger.info("[baidu_ai_search] {} results for query={}", len(results), query[:50])
         return results
 
 

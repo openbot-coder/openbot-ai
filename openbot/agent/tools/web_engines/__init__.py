@@ -14,7 +14,12 @@ Provides:
 """
 
 from openbot.agent.tools.web_engines.academic_engine import AcademicSearch
-from openbot.agent.tools.web_engines.api_engine import BaiduQianfanEngine, BaseApiEngine, TavilyEngine
+from openbot.agent.tools.web_engines.api_engine import (
+    BaiduAISearchEngine,
+    BaiduWebSearchEngine,
+    BaseApiEngine,
+    TavilyEngine,
+)
 from openbot.agent.tools.web_engines.baidu_scraper import BaiduScraper
 from openbot.agent.tools.web_engines.base import BaseEngine, SearchResult
 from openbot.agent.tools.web_engines.bing_global_scraper import BingGlobalScraper
@@ -47,6 +52,7 @@ __all__ = [
     "WeChatSearch",
     "HotlistEngine",
     "RssEngine",
-    "BaiduQianfanEngine",
+    "BaiduWebSearchEngine",
+    "BaiduAISearchEngine",
     "TavilyEngine",
 ]

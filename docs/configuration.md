@@ -1106,14 +1106,36 @@ vllm serve meta-llama/Llama-3.1-8B-Instruct --port 8000
 ```json
 {
   "modelPresets": {
-    "vllm": {
-      "provider": "vllm",
-      "model": "meta-llama/Llama-3.1-8B-Instruct"
+    "fast": {
+      "label": "Fast",
+      "model": "gpt-4.1-mini",
+      "provider": "openai",
+      "maxTokens": 4096,
+      "contextWindowTokens": 128000,
+      "temperature": 0.2,
+      "reasoningEffort": "low"
+    },
+    "deep": {
+      "label": "Deep",
+      "model": "claude-opus-4-5",
+      "provider": "anthropic",
+      "maxTokens": 8192,
+      "contextWindowTokens": 200000,
+      "reasoningEffort": "high"
+    },
+    "localSmall": {
+      "label": "Local Small",
+      "model": "llama3.2",
+      "provider": "ollama",
+      "maxTokens": 4096,
+      "contextWindowTokens": 32768,
+      "temperature": 0.2
     }
   },
   "agents": {
     "defaults": {
-      "modelPreset": "vllm"
+      "modelPreset": "fast",
+      "fallbackModels": ["deep", "localSmall"]
     }
   }
 }
@@ -1131,20 +1153,6 @@ Existing configs do not need to change. Direct `agents.defaults.model`, `provide
 
 ```json
 {
-  "modelPresets": {
-    "fast": {
-      "provider": "openrouter",
-      "model": "anthropic/claude-sonnet-4.5",
-      "maxTokens": 4096,
-      "contextWindowTokens": 65536
-    }
-  },
-  "agents": {
-    "defaults": {
-      "modelPreset": "fast",
-      "fallbackModels": ["deep", "localSmall"]
-    }
-  },
   "modelPresets": {
     "fast": {
       "label": "Fast",
@@ -1170,6 +1178,12 @@ Existing configs do not need to change. Direct `agents.defaults.model`, `provide
       "maxTokens": 4096,
       "contextWindowTokens": 32768,
       "temperature": 0.2
+    }
+  },
+  "agents": {
+    "defaults": {
+      "modelPreset": "fast",
+      "fallbackModels": ["deep", "localSmall"]
     }
   }
 }
@@ -1439,19 +1453,20 @@ Keep whitelist entries as narrow as possible, such as a single host CIDR (`192.1
 
 ### Web Search
 
-openbot uses a **concurrent multi-engine** web search architecture. It queries multiple free HTML scraping engines in parallel (no API key needed), deduplicates results, and returns the best matches.
+openbot uses a **concurrent multi-engine** web search architecture. Free HTML scraping engines require no API key. Paid API engines use key rotation with quota tracking for higher reliability.
 
 **Engine categories:**
 
 | Category | Engines | Description |
 |----------|---------|-------------|
-| `web` (default) | Bing, Sogou, Baidu, 360, DuckDuckGo, Brave | General web search across 6 engines |
+| `web` (default) | Bing, Sogou, Baidu, 360, DuckDuckGo, Brave | General web search across 6 free engines |
 | `news` | Bing News + 15 RSS feeds | News aggregation (36kr, HackerNews, TechCrunch, etc.) |
 | `academic` | ArXiv + CrossRef | Academic paper search via public APIs |
 | `github` | GitHub API | Code & repository search |
-| `all` | All above | Runs every engine (web + news + academic + github) |
+| `api` | 百度千帆 (baidu_web_search, baidu_ai_search), Tavily | Paid API engines with higher reliability |
+| `all` | All above | Runs every engine (web + news + academic + github + api) |
 
-**Timeout strategy:** Each engine has a 2s individual timeout. The total search has a 5s timeout. Engines that exceed their timeout are discarded; results from faster engines are still returned.
+**Timeout strategy:** Free engines have a 2s individual timeout; API engines have a 15s timeout. The total search has a 5s timeout. Engines that exceed their timeout are discarded; results from faster engines are still returned.
 
 **Default config** (all engines enabled):
 ```json
@@ -1481,7 +1496,69 @@ openbot uses a **concurrent multi-engine** web search architecture. It queries m
 }
 ```
 
-The LLM can also pass a `category` parameter to `web_search` to target specific engine groups (e.g., `news`, `academic`, `github`, or `all`).
+The LLM can also pass a `category` parameter to `web_search` to target specific engine groups (e.g., `news`, `academic`, `github`, `api`, or `all`).
+
+> [!TIP]
+> `baidu_ai_search` uses a full LLM to answer and requires a longer timeout (default 60s). For fast search results only, prefer `baidu_web_search` (default 15s).
+
+#### Paid API engines
+
+API engines require `api_keys` and use round-robin key rotation with local quota tracking. Supported providers:
+
+| Engine | Key | Description |
+|--------|-----|-------------|
+| `baidu_web_search` | 百度千帆 API Key | 普通搜索，返回 references 列表 |
+| `baidu_ai_search` | 百度千帆 API Key | AI 搜索，LLM + 搜索增强，返回 references + 生成答案 |
+| `tavily` | Tavily API Key | AI Agent 专用，结果质量高 |
+
+**Example: add 百度千帆 API key:**
+```json
+{
+  "tools": {
+    "web": {
+      "search": {
+        "api_keys": {
+          "baidu_web_search": ["your-baidu-qianfan-api-key"],
+          "baidu_ai_search": ["your-baidu-qianfan-api-key"]
+        }
+      }
+    }
+  }
+}
+```
+
+**Example: add Tavily API key:**
+```json
+{
+  "tools": {
+    "web": {
+      "search": {
+        "api_keys": {
+          "tavily": ["tvly-your-tavily-api-key"]
+        }
+      }
+    }
+  }
+}
+```
+
+**Example: multiple keys for one engine (load balancing):**
+```json
+{
+  "tools": {
+    "web": {
+      "search": {
+        "api_keys": {
+          "baidu_web_search": ["key1", "key2", "key3"],
+          "tavily": ["tvly-key1", "tvly-key2"]
+        }
+      }
+    }
+  }
+}
+```
+
+Multiple keys are rotated round-robin. Each key has a daily quota (default 100 queries) and a cooldown after 3 consecutive failures.
 
 #### `tools.web.search`
 
@@ -1489,6 +1566,9 @@ The LLM can also pass a `category` parameter to `web_search` to target specific 
 |--------|------|---------|-------------|
 | `maxResults` | integer | `5` | Results per search (1–10) |
 | `engines` | list of strings | `["bing","sogou","baidu","360","duckduckgo","brave"]` | Which engines to use for `web` category searches |
+| `api_keys` | object | `{}` | Paid API engine keys, e.g. `{"baidu_qianfan": ["key1", ...], "tavily": [...]}` |
+| `engineTimeout` | float | `2.0` | Per-engine timeout in seconds (free engines) |
+| `totalTimeout` | float | `5.0` | Total search timeout in seconds |
 
 ### Web Fetch
 

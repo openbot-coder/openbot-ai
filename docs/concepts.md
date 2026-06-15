@@ -14,6 +14,7 @@ openbot has one small core loop and several ways to enter it:
 | Providers | LLM backends such as OpenRouter, Anthropic, OpenAI, Bedrock, Ollama, vLLM, and other OpenAI-compatible APIs |
 | Channels | User-facing transports such as CLI, WebUI/WebSocket, Telegram, Discord, Slack, Feishu, WeChat, Email, and others |
 | Tools | Capabilities the model may call, including files, shell, web search/fetch, MCP, cron, image generation, and subagents |
+| Skills | Reusable agent capability bundles that auto-load into context from `<workspace>/skills/` or `openbot/skills/` |
 | Memory | Workspace files and session history that keep useful context across turns |
 | Gateway | Long-running process that connects enabled channels and serves the health endpoint |
 
@@ -111,7 +112,7 @@ openbot uses two related stores:
 | Sessions | `<workspace>/sessions/*.jsonl` | Recent conversation turns replayed into context |
 | Memory | `<workspace>/memory/MEMORY.md` and `<workspace>/memory/history.jsonl` | Long-term facts and consolidated history |
 
-Dream is a periodic consolidation job. It reads accumulated history and updates workspace memory so useful context can survive beyond short session replay.
+Dream is a periodic cron job that reads accumulated history from `memory/history.jsonl` together with `SOUL.md`, `USER.md`, and `memory/MEMORY.md`, then makes surgical edits to the long-term files so useful context survives beyond short session replay. It can also be triggered manually with `/dream`.
 
 See [`memory.md`](./memory.md) for the detailed design.
 
