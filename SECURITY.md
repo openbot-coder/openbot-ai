@@ -271,8 +271,8 @@ Before deploying openbot:
 **Last Updated**: 2026-04-05
 
 For the latest security updates and announcements, check:
-- GitHub Security Advisories: https://github.com/HKUDS/openbot/security/advisories
-- Release Notes: https://github.com/HKUDS/openbot/releases
+- GitHub Security Advisories: https://github.com/openbot-coder/openbot-ai/security/advisories
+- Release Notes: https://github.com/openbot-coder/openbot-ai/releases
 
 ## License
 

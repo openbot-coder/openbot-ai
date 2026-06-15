@@ -8,7 +8,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $Package = "openbot-ai"
-$MainSource = "https://github.com/HKUDS/openbot/archive/refs/heads/main.zip"
+$MainSource = "https://github.com/openbot-coder/openbot-ai/archive/refs/heads/main.zip"
 $InstallTarget = $Package
 $InstallSource = "PyPI"
 

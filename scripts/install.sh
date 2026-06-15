@@ -2,7 +2,7 @@
 set -eu
 
 package="openbot-ai"
-main_source="https://github.com/HKUDS/openbot/archive/refs/heads/main.zip"
+main_source="https://github.com/openbot-coder/openbot-ai/archive/refs/heads/main.zip"
 install_target="$package"
 install_source="PyPI"
 dry_run="0"

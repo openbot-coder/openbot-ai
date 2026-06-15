@@ -4,7 +4,7 @@ When /stop cancels an active task, the runtime checkpoint (tool results,
 assistant messages accumulated so far) should be materialized into session
 history rather than silently discarded.
 
-See: https://github.com/HKUDS/openbot/issues/2966
+See: https://github.com/openbot-coder/openbot-ai/issues/2966
 """
 
 from __future__ import annotations

@@ -35,7 +35,7 @@ Restart the deployed process after editing `config.json`. Long-running processes
 > If you get **Permission denied**, fix ownership on the host first: `sudo chown -R 1000:1000 ~/.openbot`, or pass `--user $(id -u):$(id -g)` to match your host UID. Podman users can use `--userns=keep-id` instead.
 >
 > [!IMPORTANT]
-> Official Docker usage currently means building from this repository with the included `Dockerfile`. Docker Hub images under third-party namespaces are not maintained or verified by HKUDS/openbot; do not mount API keys or bot tokens into them unless you trust the publisher.
+> Official Docker usage currently means building from this repository with the included `Dockerfile`. Docker Hub images under third-party namespaces are not maintained or verified by openbot-coder/openbot-ai; do not mount API keys or bot tokens into them unless you trust the publisher.
 
 > [!IMPORTANT]
 > The gateway and WebSocket channel default to `host: "127.0.0.1"` in `config.json` (set in `openbot/config/schema.py`). Docker `-p` port forwarding cannot reach a container's loopback interface, so for the host or LAN to reach the exposed ports you must set both binds to `0.0.0.0` in `~/.openbot/config.json` before starting the container. To serve the bundled WebUI from Docker, enable the WebSocket channel and protect bootstrap with a secret:

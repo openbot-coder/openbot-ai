@@ -81,33 +81,33 @@ The easiest path is the one-command installer. It installs or upgrades openbot, 
 **macOS / Linux**
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.sh)"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.sh)"
 ```
 
 **Windows PowerShell**
 
 ```powershell
-irm https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.ps1 | iex
 ```
 
 These commands install the stable PyPI package. To preview what the installer would do without changing your environment, pass `--dry-run`:
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.sh)" -- --dry-run
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.sh)" -- --dry-run
 ```
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.ps1))) --dry-run
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.ps1))) --dry-run
 ```
 
 Use the development installer only when a maintainer asks you to test the current `main` branch:
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.sh)" -- --dev
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.sh)" -- --dev
 ```
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.ps1))) --dev
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.ps1))) --dev
 ```
 
 If the command says `curl` or `irm` is not found, or it cannot download from GitHub, use the manual install command below.
@@ -428,4 +428,4 @@ When you ask for help, include:
 
 Never paste real API keys, bot tokens, OAuth tokens, or private chat IDs into a public issue or chat.
 
-If you find a docs mistake, outdated command, or confusing step, please open an issue: <https://github.com/HKUDS/openbot/issues>.
+If you find a docs mistake, outdated command, or confusing step, please open an issue: <https://github.com/openbot-coder/openbot-ai/issues>.

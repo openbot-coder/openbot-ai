@@ -23,13 +23,13 @@ Pick one install method.
 **One-command setup:**
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.sh)"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.sh)"
 ```
 
 On Windows PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.ps1 | iex
 ```
 
 The default command installs or upgrades `openbot-ai` from PyPI, then starts `openbot onboard --wizard`. If you finish the wizard and save the config, skip the manual initialize/configure steps and go straight to [Check the Setup](#4-check-the-setup).
@@ -37,21 +37,21 @@ The default command installs or upgrades `openbot-ai` from PyPI, then starts `op
 To preview the plan without changing your environment, pass `--dry-run`; combine it with `--dev` when you want to preview the main-branch install.
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.sh)" -- --dry-run
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.sh)" -- --dry-run
 ```
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.ps1))) --dry-run
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.ps1))) --dry-run
 ```
 
 To install the current `main` branch instead, pass `--dev`:
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.sh)" -- --dev
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.sh)" -- --dev
 ```
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.ps1))) --dev
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.ps1))) --dev
 ```
 
 If `curl` or `irm` is unavailable, or GitHub raw downloads are blocked on your network, use one of the manual install methods below.
@@ -75,7 +75,7 @@ openbot --version
 **Latest source checkout:**
 
 ```bash
-git clone https://github.com/HKUDS/openbot.git
+git clone https://github.com/openbot-coder/openbot-ai.git
 cd openbot
 python -m pip install -e .
 openbot --version

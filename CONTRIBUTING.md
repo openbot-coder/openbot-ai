@@ -46,7 +46,7 @@ git pull --ff-only upstream main
 git switch -c your-topic-branch
 ```
 
-Use your primary HKUDS/openbot remote in place of `upstream` if your checkout
+Use your primary openbot-coder/openbot-ai remote in place of `upstream` if your checkout
 uses a different remote name.
 
 Keep unrelated local changes out of the topic branch. If your checkout already has
@@ -59,7 +59,7 @@ Keep setup boring and reliable. The goal is to get you into the code quickly:
 
 ```bash
 # Clone the repository
-git clone https://github.com/HKUDS/openbot.git
+git clone https://github.com/openbot-coder/openbot-ai.git
 cd openbot
 
 # Install with dev dependencies
@@ -126,7 +126,7 @@ explicitly in the PR description so it can be discussed before merge.
 
 If you have questions, ideas, or half-formed insights, you are warmly welcome here.
 
-Please feel free to open an [issue](https://github.com/HKUDS/openbot/issues), join the community, or simply reach out:
+Please feel free to open an [issue](https://github.com/openbot-coder/openbot-ai/issues), join the community, or simply reach out:
 
 - [Discord](https://discord.gg/MnCvHqpUGB)
 - [Feishu/WeChat](./COMMUNICATION.md)

@@ -8,7 +8,7 @@ Most JSON examples in these docs are snippets to merge into `~/.openbot/config.j
 
 Provider examples are concrete walkthroughs, not rankings or endorsements. Use the provider whose key, endpoint, and model ID you actually control.
 
-If you find a docs mistake, outdated command, or confusing step, please open an issue: <https://github.com/HKUDS/openbot/issues>.
+If you find a docs mistake, outdated command, or confusing step, please open an issue: <https://github.com/openbot-coder/openbot-ai/issues>.
 
 ## Pick a Track
 

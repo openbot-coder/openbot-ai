@@ -18,7 +18,7 @@ from openbot.providers.registry import find_by_name
 from openbot.utils.helpers import detect_image_mime
 
 _OPENROUTER_ATTRIBUTION_HEADERS = {
-    "HTTP-Referer": "https://github.com/HKUDS/openbot",
+    "HTTP-Referer": "https://github.com/openbot-coder/openbot-ai",
     "X-OpenRouter-Title": "openbot",
     "X-OpenRouter-Categories": "cli-agent,personal-agent",
 }

@@ -53,7 +53,7 @@ _ALNUM = string.ascii_letters + string.digits
 _STANDARD_TC_KEYS = frozenset({"id", "type", "index", "function"})
 _STANDARD_FN_KEYS = frozenset({"name", "arguments"})
 _DEFAULT_OPENROUTER_HEADERS = {
-    "HTTP-Referer": "https://github.com/HKUDS/openbot",
+    "HTTP-Referer": "https://github.com/openbot-coder/openbot-ai",
     "X-OpenRouter-Title": "openbot",
     "X-OpenRouter-Categories": "cli-agent,personal-agent",
 }

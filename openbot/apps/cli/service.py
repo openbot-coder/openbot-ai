@@ -24,7 +24,7 @@ from openbot.security.workspace_policy import is_path_within
 
 CLI_ANYTHING_REGISTRY_URL = "https://hkuds.github.io/CLI-Anything/registry.json"
 CLI_ANYTHING_PUBLIC_REGISTRY_URL = "https://hkuds.github.io/CLI-Anything/public_registry.json"
-CLI_ANYTHING_RAW_BASE = "https://raw.githubusercontent.com/HKUDS/CLI-Anything/main"
+CLI_ANYTHING_RAW_BASE = "https://raw.githubusercontent.com/openbot-coder/CLI-Anything/main"
 openbot_EXTENSION_REGISTRY_URL = "https://raw.githubusercontent.com/Re-bin/openbot-extension/main/registry.json"
 openbot_EXTENSION_RAW_BASE = "https://raw.githubusercontent.com/Re-bin/openbot-extension/main"
 _CATALOG_SOURCES = (
@@ -161,7 +161,7 @@ _BRAND_DOMAINS: dict[str, tuple[str, str]] = {
     "exa": ("exa.ai", "#111827"),
     "feishu": ("larksuite.com", "#00A5FF"),
     "inkstitch": ("inkstitch.org", "#222222"),
-    "macrocli": ("github.com/HKUDS/CLI-Anything/tree/main/macrocli", "#24292F"),
+    "macrocli": ("github.com/openbot-coder/CLI-Anything/tree/main/macrocli", "#24292F"),
     "mubu": ("mubu.com", "#16A085"),
     "nslogger": ("github.com/fpillet/NSLogger", "#24292F"),
     "novita": ("novita.ai", "#7C3AED"),

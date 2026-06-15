@@ -72,7 +72,7 @@ Use the same Python command for install checks and module fallback. On macOS/Lin
 | `No module named openbot` | You are running a different Python than the one used for installation. Run `python -m pip show openbot-ai`, `python3 -m pip show openbot-ai`, or `py -m pip show openbot-ai`, matching the command that installed openbot. |
 | `pip is not available` | The installer tries `python -m ensurepip --upgrade` first. If that fails, install pip for that Python, or use a Python installer/distribution that includes pip. |
 | `externally-managed-environment` | Your system Python blocks global pip installs. The one-command installer retries with `--user`; if that still fails, create a virtual environment or install with `uv`/`pipx`. |
-| Installer chose the wrong Python | Set `PYTHON` before running the installer, such as `PYTHON=python3 sh -c "$(curl -fsSL https://raw.githubusercontent.com/HKUDS/openbot/main/scripts/install.sh)"` or `$env:PYTHON="py"` before the PowerShell command. |
+| Installer chose the wrong Python | Set `PYTHON` before running the installer, such as `PYTHON=python3 sh -c "$(curl -fsSL https://raw.githubusercontent.com/openbot-coder/openbot-ai/main/scripts/install.sh)"` or `$env:PYTHON="py"` before the PowerShell command. |
 | Editable source install does not update | From the repo root, run `python -m pip install -e .` again with the Python command used for development, then check `python -m openbot --version` or `openbot --version`. |
 | WebUI build tools missing | They are only needed for WebUI development. Packaged installs already include the WebUI bundle. |
 
@@ -263,4 +263,4 @@ When opening an issue or asking for help, include:
 
 Never paste real API keys, bot tokens, OAuth tokens, or private chat IDs into public issues.
 
-If you find a docs mistake, outdated command, or confusing step, please open an issue: <https://github.com/HKUDS/openbot/issues>.
+If you find a docs mistake, outdated command, or confusing step, please open an issue: <https://github.com/openbot-coder/openbot-ai/issues>.
