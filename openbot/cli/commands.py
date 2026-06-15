@@ -524,6 +524,10 @@ def onboard(
             config = result.config
             save_config(config, config_path)
             console.print(f"[green]✓[/green] Config saved at {config_path}")
+            console.print(
+                "[dim](i) To use paid search APIs (Baidu Qianfan, Tavily, etc.), "
+                "edit tools.web.search.apiKeys in config.json[/dim]"
+            )
         except Exception as e:
             console.print(f"[red]✗[/red] Error during configuration: {e}")
             console.print("[yellow]Please run 'openbot onboard' again to complete setup.[/yellow]")
