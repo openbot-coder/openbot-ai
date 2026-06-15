@@ -5,7 +5,7 @@ import sys
 import textwrap
 from pathlib import Path
 
-import tomllib
+import tomli as tomllib
 
 
 def test_source_checkout_import_uses_pyproject_version_without_metadata() -> None:

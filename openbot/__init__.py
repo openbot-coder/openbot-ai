@@ -2,10 +2,6 @@
 openbot - A lightweight AI agent framework
 """
 
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
@@ -16,8 +12,19 @@ def _read_pyproject_version() -> str | None:
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     if not pyproject.exists():
         return None
-    data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
-    return data.get("project", {}).get("version")
+    text = pyproject.read_text(encoding="utf-8")
+    # Minimal TOML version extraction without requiring tomllib/tomli.
+    # Handles: version = "x.y.z" and [project] version = "x.y.z"
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("version"):
+            # e.g. version = "0.2.1"
+            parts = stripped.split("=", 1)
+            if len(parts) == 2:
+                val = parts[1].strip().strip("\"'")
+                if val:
+                    return val
+    return None
 
 
 def _resolve_version() -> str:

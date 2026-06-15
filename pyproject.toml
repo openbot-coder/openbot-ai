@@ -127,8 +127,8 @@ build-backend = "hatchling.build"
 [tool.hatch.metadata]
 allow-direct-references = true
 
-[tool.hatch.build.hooks.custom]
-# Implementation lives in the conventional `hatch_build.py` at the repo root.
+# [tool.hatch.build.hooks.custom]
+# webui build hook removed — webui deleted from project
 
 [tool.hatch.build]
 include = [
@@ -151,7 +151,6 @@ packages = ["openbot"]
 include = [
     "openbot/",
     "bridge/",
-    "hatch_build.py",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
