@@ -60,9 +60,14 @@ class MemoryStore:
         self.user_file = workspace / "USER.md"
         self._cursor_file = self.memory_dir / ".cursor"
         self._dream_cursor_file = self.memory_dir / ".dream_cursor"
-        self._corruption_logged = False  # rate-limit non-int cursor warning
-        self._oversize_logged = False  # rate-limit oversized-entry warning
-        self._append_lock = threading.Lock()  # serialize cursor allocation + append
+        self.knowledge_dir = ensure_dir(self.memory_dir / "knowledge")
+        self.session_dir = ensure_dir(self.memory_dir / "session")
+        self.global_dir = ensure_dir(self.memory_dir / "global")
+        self.promotion_dir = ensure_dir(self.memory_dir / "promotion_candidates")
+        self.archive_dir = ensure_dir(self.memory_dir / "archive")
+        self._corruption_logged = False
+        self._oversize_logged = False
+        self._append_lock = threading.Lock()
         self._git = GitStore(workspace, tracked_files=[
             "SOUL.md", "USER.md", "memory/MEMORY.md", "memory/.dream_cursor",
         ])
@@ -209,6 +214,166 @@ class MemoryStore:
 
     def write_memory(self, content: str) -> None:
         self.memory_file.write_text(content, encoding="utf-8")
+
+    def write_amp_memory(self, path: Path, frontmatter: dict, body: str) -> None:
+        import yaml
+        fm = yaml.dump(frontmatter, default_flow_style=False, allow_unicode=True)
+        content = f"---\n{fm}---\n\n{body}"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    def read_amp_memory(self, path: Path) -> dict | None:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return None
+        if not text.startswith("---"):
+            return {"frontmatter": {}, "body": text}
+        end = text.find("---", 3)
+        if end == -1:
+            return {"frontmatter": {}, "body": text}
+        fm_text = text[3:end].strip()
+        body = text[end + 3:].strip()
+        frontmatter = {}
+        for line in fm_text.split("\n"):
+            line = line.strip()
+            if ":" in line and not line.startswith("#"):
+                key, _, value = line.partition(":")
+                key = key.strip()
+                value = value.strip()
+                if value.startswith('"') and value.endswith('"'):
+                    value = value[1:-1]
+                elif value.startswith("'") and value.endswith("'"):
+                    value = value[1:-1]
+                if value.startswith("[") and value.endswith("]"):
+                    value = [v.strip() for v in value[1:-1].split(",")]
+                frontmatter[key] = value
+        return {"frontmatter": frontmatter, "body": body}
+
+    def update_activation(self, path: Path) -> None:
+        parsed = self.read_amp_memory(path)
+        if parsed is None:
+            return
+        fm = parsed["frontmatter"]
+        body = parsed["body"]
+        try:
+            fm["activation_count"] = int(fm.get("activation_count", 0)) + 1
+        except (ValueError, TypeError):
+            fm["activation_count"] = 1
+        from datetime import datetime
+        fm["last_activated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.write_amp_memory(path, fm, body)
+
+    def lint_memories(self) -> list[dict]:
+        issues = []
+        from datetime import datetime
+        now = datetime.now()
+        stale_threshold_days = 90
+        for md_file in self.knowledge_dir.rglob("*.md"):
+            parsed = self.read_amp_memory(md_file)
+            if parsed is None:
+                continue
+            fm = parsed["frontmatter"]
+            if fm.get("strength") == "weak":
+                last_activated = fm.get("last_activated", "")
+                if last_activated:
+                    try:
+                        la = datetime.fromisoformat(last_activated.replace("Z", "+00:00"))
+                        if (now - la).days > stale_threshold_days:
+                            issues.append({
+                                "type": "stale",
+                                "path": str(md_file.relative_to(self.memory_dir)),
+                                "action": "deprecate",
+                            })
+                    except (ValueError, TypeError):
+                        pass
+            if not fm.get("last_activated") and not fm.get("tags"):
+                issues.append({
+                    "type": "orphan",
+                    "path": str(md_file.relative_to(self.memory_dir)),
+                    "action": "mark_for_archive",
+                })
+        for credits_file in self.promotion_dir.rglob("credits.md"):
+            try:
+                credits = int(credits_file.read_text(encoding="utf-8").strip())
+                if credits >= 2:
+                    issues.append({
+                        "type": "promotion",
+                        "path": str(credits_file.parent.relative_to(self.memory_dir)),
+                        "action": "promote_to_knowledge",
+                    })
+            except (ValueError, OSError):
+                pass
+        return issues
+
+    def compute_strength(self, memory: dict, now=None) -> float:
+        import math
+        from datetime import datetime
+        if now is None:
+            now = datetime.now()
+        last_activated = memory.get("last_activated", "")
+        if not last_activated:
+            elapsed_days = 365
+        else:
+            try:
+                la = datetime.fromisoformat(last_activated.replace("Z", "+00:00"))
+                elapsed_days = max(0, (now - la).days)
+            except (ValueError, TypeError):
+                elapsed_days = 365
+        activation_count = int(memory.get("activation_count", 0))
+        strength_map = {"weak": 0.3, "medium": 0.6, "strong": 1.0}
+        base = strength_map.get(memory.get("strength", "weak"), 0.3)
+        half_life = 30 * (1 + activation_count)
+        decay = math.exp(-elapsed_days / half_life)
+        return base * decay
+
+    def sync_to_legacy_memory(self) -> None:
+        if not self.should_sync():
+            return
+        summaries = []
+        for md_file in sorted(self.knowledge_dir.rglob("*.md")):
+            parsed = self.read_amp_memory(md_file)
+            if parsed is None:
+                continue
+            fm = parsed["frontmatter"]
+            body_preview = parsed["body"][:200].replace("\n", " ")
+            summaries.append(f"- [{fm.get('type', 'Fact')}] ({fm.get('scope', 'project')}) {fm.get('title', body_preview[:50])}: {body_preview}")
+        if not summaries:
+            return
+        sync_marker = "\n\n---\n\n## AMP Sync (auto-generated, do not edit)\n\n"
+        existing = self.read_memory()
+        if "## AMP Sync" in existing:
+            existing = existing[:existing.index("## AMP Sync")]
+        new_content = existing.rstrip() + sync_marker + "\n".join(summaries) + "\n"
+        self.write_memory(new_content)
+        self._update_sync_hash()
+
+    def should_sync(self) -> bool:
+        import hashlib
+        hash_file = self.memory_dir / ".last_sync_hash"
+        current_hash = hashlib.sha256()
+        for md_file in sorted(self.knowledge_dir.rglob("*.md")):
+            try:
+                current_hash.update(md_file.read_bytes())
+            except OSError:
+                pass
+        current_digest = current_hash.hexdigest()
+        try:
+            last_hash = hash_file.read_text(encoding="utf-8").strip()
+        except FileNotFoundError:
+            return True
+        return current_digest != last_hash
+
+    def _update_sync_hash(self) -> None:
+        import hashlib
+        hash_file = self.memory_dir / ".last_sync_hash"
+        current_hash = hashlib.sha256()
+        for md_file in sorted(self.knowledge_dir.rglob("*.md")):
+            try:
+                current_hash.update(md_file.read_bytes())
+            except OSError:
+                pass
+        hash_file.write_text(current_hash.hexdigest(), encoding="utf-8")
 
     # -- SOUL.md -------------------------------------------------------------
 
@@ -482,7 +647,7 @@ class MemoryStore:
         skills_dir.mkdir(parents=True, exist_ok=True)
 
         extra_read = [BUILTIN_SKILLS_DIR] if BUILTIN_SKILLS_DIR.exists() else None
-        editable_roots = [self.soul_file, self.user_file, skills_dir]
+        editable_roots = [self.soul_file, self.user_file, skills_dir, self.knowledge_dir, self.session_dir]
 
         tools.register(ReadFileTool(
             workspace=workspace,

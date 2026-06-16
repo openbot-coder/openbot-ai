@@ -1110,6 +1110,8 @@ def _run_gateway(
                 if MemoryStore.dream_run_completed(resp):
                     store.set_last_dream_cursor(last_cursor)
                     logger.info("Dream cron job completed, cursor advanced to {}", last_cursor)
+                    store.lint_memories()
+                    store.sync_to_legacy_memory()
                 else:
                     logger.warning(
                         "Dream cron job did not complete; cursor remains at {}",
