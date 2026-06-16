@@ -75,6 +75,14 @@ class TestReadAmpMemory:
         parsed = store.read_amp_memory(store.knowledge_dir / "nonexistent.md")
         assert parsed is None
 
+    def test_returns_body_for_malformed_frontmatter(self, store: MemoryStore):
+        target = store.knowledge_dir / "facts" / "malformed.md"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("---\nbroken: [unclosed\n---\nbody text", encoding="utf-8")
+        parsed = store.read_amp_memory(target)
+        assert parsed["frontmatter"] == {}
+        assert "body text" in parsed["body"]
+
 
 class TestUpdateActivation:
     def test_increments_activation_count(self, store: MemoryStore):
@@ -177,6 +185,20 @@ class TestLintMemories:
         assert len(promo_issues) == 1
         assert promo_issues[0]["path"].endswith(slug)
 
+    def test_ignores_malformed_credits_file(self, store: MemoryStore):
+        slug = "bad-learning"
+        credits_file = store.promotion_dir / slug / "credits.md"
+        credits_file.parent.mkdir(parents=True, exist_ok=True)
+        credits_file.write_text("not-a-number", encoding="utf-8")
+        issues = store.lint_memories()
+        promo_issues = [i for i in issues if i["type"] == "promotion" and promo_issues[0]["path"].endswith(slug)]
+        assert len(promo_issues) == 0
+
+    def test_ignores_missing_credits_file(self, store: MemoryStore):
+        issues = store.lint_memories()
+        promo_issues = [i for i in issues if i["type"] == "promotion"]
+        assert len(promo_issues) == 0
+
 
 class TestComputeStrength:
     def test_strong_never_activated_decays(self, store: MemoryStore):
@@ -226,3 +248,23 @@ class TestSyncToLegacyMemory:
         assert store.should_sync() is False
         target.write_text("changed", encoding="utf-8")
         assert store.should_sync() is True
+
+    def test_sync_skips_when_knowledge_empty(self, store: MemoryStore):
+        store.sync_to_legacy_memory()
+        assert store.read_memory() == ""
+
+    def test_lint_handles_invalid_date_gracefully(self, store: MemoryStore):
+        target = store.knowledge_dir / "facts" / "baddate.md"
+        store.write_amp_memory(
+            target,
+            {
+                "type": "Fact",
+                "strength": "weak",
+                "last_activated": "not-a-date",
+                "activation_count": 0,
+            },
+            "body",
+        )
+        issues = store.lint_memories()
+        stale_issues = [i for i in issues if i["type"] == "stale"]
+        assert len(stale_issues) == 0
