@@ -223,31 +223,22 @@ class MemoryStore:
         path.write_text(content, encoding="utf-8")
 
     def read_amp_memory(self, path: Path) -> dict | None:
+        import yaml
         try:
             text = path.read_text(encoding="utf-8")
         except FileNotFoundError:
             return None
         if not text.startswith("---"):
             return {"frontmatter": {}, "body": text}
-        end = text.find("---", 3)
-        if end == -1:
+        parts = text.split("---", 2)
+        if len(parts) < 3:
             return {"frontmatter": {}, "body": text}
-        fm_text = text[3:end].strip()
-        body = text[end + 3:].strip()
-        frontmatter = {}
-        for line in fm_text.split("\n"):
-            line = line.strip()
-            if ":" in line and not line.startswith("#"):
-                key, _, value = line.partition(":")
-                key = key.strip()
-                value = value.strip()
-                if value.startswith('"') and value.endswith('"'):
-                    value = value[1:-1]
-                elif value.startswith("'") and value.endswith("'"):
-                    value = value[1:-1]
-                if value.startswith("[") and value.endswith("]"):
-                    value = [v.strip() for v in value[1:-1].split(",")]
-                frontmatter[key] = value
+        fm_text = parts[1].strip()
+        body = parts[2].strip()
+        try:
+            frontmatter = yaml.safe_load(fm_text) or {}
+        except yaml.YAMLError:
+            frontmatter = {}
         return {"frontmatter": frontmatter, "body": body}
 
     def update_activation(self, path: Path) -> None:
@@ -267,7 +258,7 @@ class MemoryStore:
     def lint_memories(self) -> list[dict]:
         issues = []
         from datetime import datetime
-        now = datetime.now()
+        now = datetime.utcnow()
         stale_threshold_days = 90
         for md_file in self.knowledge_dir.rglob("*.md"):
             parsed = self.read_amp_memory(md_file)
@@ -279,7 +270,8 @@ class MemoryStore:
                 if last_activated:
                     try:
                         la = datetime.fromisoformat(last_activated.replace("Z", "+00:00"))
-                        if (now - la).days > stale_threshold_days:
+                        la_naive = la.replace(tzinfo=None)
+                        if (now - la_naive).days > stale_threshold_days:
                             issues.append({
                                 "type": "stale",
                                 "path": str(md_file.relative_to(self.memory_dir)),
