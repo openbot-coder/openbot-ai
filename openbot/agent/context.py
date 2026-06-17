@@ -3,6 +3,7 @@
 import base64
 import mimetypes
 import platform
+import re
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -87,6 +88,22 @@ class ContextBuilder:
         if amp_index and not self._is_template_content(amp_index, "memory/MEMORY.md"):
             parts.append(f"# Memory Index\n\n{amp_index}")
             self.memory.update_activation(self.memory.memory_dir / "MEMORY.md")
+
+            recall_related = re.findall(
+                r'related:\s*\[[^\]]*\]\(([^)]+)\)|related:\s*(\S+\.md)',
+                amp_index,
+            )
+            for match in recall_related:
+                ref = match[0] or match[1]
+                if not ref:
+                    continue
+                ref_path = (
+                    self.memory.knowledge_dir / ref
+                    if not Path(ref).is_absolute()
+                    else Path(ref)
+                )
+                if ref_path.exists():
+                    self.memory.update_activation(ref_path)
 
         always_skills = self.skills.get_always_skills()
         if always_skills:
