@@ -96,7 +96,7 @@ jobs:
       - name: Build wheel and sdist (skip WebUI)
         run: uv build
         env:
-          OPENBOT_SKIP_WEBUI_BUILD: "1"
+          openbot_SKIP_WEBUI_BUILD: "1"
 
       - name: Verify package metadata
         run: |
