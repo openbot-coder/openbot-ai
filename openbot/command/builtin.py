@@ -362,6 +362,8 @@ async def cmd_dream(ctx: CommandContext) -> OutboundMessage:
                 sha = store.git.auto_commit(commit_msg)
                 if sha:
                     content += f" (commit {sha})"
+            store.lint_memories()
+            store.sync_to_legacy_memory()
             store.compact_history()
             prune_dream_sessions(loop.sessions.sessions_dir)
         await loop.bus.publish_outbound(OutboundMessage(

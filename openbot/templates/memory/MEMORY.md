@@ -1,6 +1,12 @@
-# Long-term Memory
+# Long-term Memory Index
 
-This file stores important information that should persist across sessions.
+This file is a directory/index only. It must stay under 200 lines.
+Each entry is a pointer (path + one-line description), not a full dump.
+
+## Rules
+- ≤ 200 lines total
+- TOC format only: path + short description per entry
+- Full content lives in source code, docs, or dedicated memory files under knowledge/
 
 ## User Information
 
@@ -16,8 +22,7 @@ This file stores important information that should persist across sessions.
 
 ## Important Notes
 
-(Things to remember)
+(Things to remember — keep each entry to one line)
 
 ---
-
 *This file is automatically updated by openbot when important information should be remembered.*

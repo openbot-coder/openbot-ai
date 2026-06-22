@@ -72,6 +72,25 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for contribution flow and PR guidelin
 - Linting: `ruff` with rules E, F, I, N, W (E501 ignored).
 - pytest with `asyncio_mode = "auto"`.
 
+## AMP Memory Rules
+
+### Write Rules
+- New fact → memory/knowledge/facts/<slug>.md (type: Fact)
+- Lesson learned → memory/knowledge/learnings/<slug>.md (type: Learning)
+- Tech decision → memory/knowledge/decisions/<slug>.md (type: Decision)
+- User preference → memory/knowledge/preferences/<slug>.md (type: Preference)
+- Hard rule → memory/knowledge/constraints/<slug>.md (type: Constraint)
+- Session observation → memory/session/<sid>/observations.md (type: Observation)
+
+### Read Rules
+- After reading any memory file, update last_activated + activation_count
+
+### Maintenance Rules
+- Lint runs every Dream cycle
+- promotion_candidates/ with credits >= 2 → suggest promote to knowledge/
+- Weak memories unactivated > 90 days → deprecated
+- Orphan files > 30 days → migrate to archive/
+
 ## Common File Locations
 
 - Config schema: `openbot/config/schema.py`

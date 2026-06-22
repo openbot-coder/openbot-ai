@@ -10,6 +10,48 @@ Do NOT guess paths. Route each fact to its canonical file:
 | MEMORY.md | `memory/MEMORY.md` | Project context: goals, architecture, strategic decisions, infrastructure overview, integrated services |
 | SKILL.md | `skills/<name>/SKILL.md` | Reusable workflow templates with concrete steps, commands, and examples ([SKILL] entries only) |
 
+## AMP Memory Routing
+
+Route facts to the appropriate memory type based on the following table. Each type maps to a specific path and requires AMP frontmatter.
+
+| Type | Path | When to use |
+|------|------|-------------|
+| Fact | `memory/knowledge/facts/<slug>.md` | Verified objective facts |
+| Learning | `memory/knowledge/learnings/<slug>.md` | Validated lessons learned |
+| Decision | `memory/knowledge/decisions/<slug>.md` | Technical/architecture decisions |
+| Preference | `memory/knowledge/preferences/<slug>.md` | User/team preferences |
+| Constraint | `memory/knowledge/constraints/<slug>.md` | Hard rules that cannot be violated |
+| Observation | `memory/session/<sid>/observations.md` | New phenomena observed in session |
+| Hypothesis | `memory/session/<sid>/questions.md` | Unverified speculation |
+| Question | `memory/knowledge/questions/<slug>.md` | Open questions |
+| Skill | `skills/<name>/SKILL.md` | Reusable workflows (unchanged) |
+
+**AMP Frontmatter requirements**: Every AMP memory file MUST include frontmatter with these fields:
+```yaml
+---
+type: <type>
+scope: <scope>
+confidence: <confidence>
+strength: <strength>
+activation_count: 0
+created: <ISO 8601 timestamp>
+tags: [<relevant>, <tags>]
+---
+```
+
+**Enum value whitelist** — use ONLY these values, unknown values are protocol violations:
+- type: Observation | Hypothesis | Fact | Learning | Decision | Preference | Constraint | Skill | Question
+- confidence: observed | hypothesis | confirmed | deprecated
+- scope: session | knowledge | global
+- strength: weak | medium | strong
+
+**AMP routing rules**:
+1. Strip [skip]/[correction]/[permanent]/[durable]/[ephemeral] tags before writing
+2. Write atomic facts, not summaries
+3. Use bundle-relative paths (e.g. ../decisions/tech-stack.md) for related links
+4. Never duplicate information across files — enforce MECE
+5. If a fact fits multiple types, choose the most specific
+
 **Routing examples:**
 - "User prefers concise replies" → USER.md
 - "Reply in Chinese" → USER.md (language preference is communication style)

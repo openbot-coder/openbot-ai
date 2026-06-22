@@ -1566,7 +1566,7 @@ Multiple keys are rotated round-robin. Each key has a daily quota (default 100 q
 |--------|------|---------|-------------|
 | `maxResults` | integer | `5` | Results per search (1–10) |
 | `engines` | list of strings | `["bing","sogou","baidu","360","duckduckgo","brave"]` | Which engines to use for `web` category searches |
-| `api_keys` | object | `{}` | Paid API engine keys, e.g. `{"baidu_qianfan": ["key1", ...], "tavily": [...]}` |
+| `api_keys` | object | `{}` | Paid API engine keys, e.g. `{"baidu_web_search": ["key1", ...], "tavily": [...]}` |
 | `engineTimeout` | float | `2.0` | Per-engine timeout in seconds (free engines) |
 | `totalTimeout` | float | `5.0` | Total search timeout in seconds |
 

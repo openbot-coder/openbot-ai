@@ -603,6 +603,13 @@ def sync_workspace_templates(workspace: Path, silent: bool = False) -> list[str]
     _write(None, workspace / "memory" / "history.jsonl")
     (workspace / "skills").mkdir(exist_ok=True)
 
+    # Create AMP memory subdirectories
+    knowledge = workspace / "memory" / "knowledge"
+    for sub in ("facts", "decisions", "learnings", "preferences", "constraints", "questions"):
+        (knowledge / sub).mkdir(parents=True, exist_ok=True)
+    for sub in ("session", "global", "promotion_candidates", "archive"):
+        (workspace / "memory" / sub).mkdir(parents=True, exist_ok=True)
+
     if added and not silent:
         from rich.console import Console
 
@@ -619,6 +626,8 @@ def sync_workspace_templates(workspace: Path, silent: bool = False) -> list[str]
                 "SOUL.md",
                 "USER.md",
                 "memory/MEMORY.md",
+                "memory/.dream_cursor",
+                "memory/knowledge",
             ],
         )
         gs.init()
